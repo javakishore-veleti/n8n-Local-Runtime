@@ -1,0 +1,22 @@
+{
+  "name": "local-n8n-platform",
+  "private": true,
+  "scripts": {
+    "start": "sh DevOps/Local/start-local-ai.sh",
+    "stop": "sh DevOps/Local/stop-local-ai.sh",
+    "destroy": "sh DevOps/Local/destroy-local-ai.sh",
+
+    "status": "docker compose -f DevOps/Local/docker-compose.yml ps",
+    "logs": "docker compose -f DevOps/Local/docker-compose.yml logs -f",
+    "logs:n8n": "docker compose -f DevOps/Local/docker-compose.yml logs -f n8n",
+
+    "open:n8n": "open http://localhost:9567",
+    "open:neo4j": "open http://localhost:9474",
+    "open:pgadmin": "open http://localhost:9505",
+    "open:grafana": "open http://localhost:9300",
+    "open:prometheus": "open http://localhost:9909",
+    "open:jaeger": "open http://localhost:9668",
+
+    "open:all": "npm run open:n8n && npm run open:neo4j && npm run open:pgadmin && npm run open:grafana && npm run open:prometheus && npm run open:jaeger"
+  }
+}
