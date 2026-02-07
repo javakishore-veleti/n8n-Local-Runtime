@@ -12,6 +12,11 @@ services:
       - ${LOCAL_AI_DEPLOY}/postgres:/var/lib/postgresql/data
     ports:
       - "9432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n -d n8n"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   pgadmin:
     image: dpage/pgadmin4
@@ -25,7 +30,8 @@ services:
     ports:
       - "9505:80"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   neo4j:
     image: neo4j:5
@@ -36,6 +42,7 @@ services:
       NEO4J_PLUGINS: '["graph-data-science"]'
     volumes:
       - ${LOCAL_AI_DEPLOY}/neo4j:/data
+      # Shared AI data lake (read/write)
       - ${LOCAL_AI_DATA}:/data/local-ai
     ports:
       - "9474:7474"
@@ -47,6 +54,7 @@ services:
     restart: unless-stopped
     volumes:
       - ${LOCAL_AI_DEPLOY}/mongodb:/data/db
+      # Shared AI data lake (read/write)
       - ${LOCAL_AI_DATA}:/data/local-ai
     ports:
       - "9017:27017"
@@ -75,16 +83,18 @@ services:
     container_name: local-n8n-platform-jaeger
     restart: unless-stopped
     ports:
-      - "9668:16686"   # Jaeger UI
-      - "9437:4317"    # OTLP gRPC
-      - "9438:4318"    # OTLP HTTP
+      - "9668:16686"
+      - "9437:4317"
+      - "9438:4318"
 
+  # 🔹 N8N UI + AI Orchestration
   n8n:
     image: n8nio/n8n:latest
     container_name: local-n8n-platform-n8n
     restart: unless-stopped
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: postgres
@@ -99,17 +109,11 @@ services:
       NODE_ENV: development
       GENERIC_TIMEZONE: UTC
 
-      # 🔥 THIS IS THE KEY PART
-      N8N_IMPORT_CREDENTIALS: /import/credentials
-      N8N_IMPORT_WORKFLOWS: /import/workflows
-
+      # Convention (documented, not required)
+      AI_DATA_BASE_PATH: /data/local-ai/my_ai_profiles
     volumes:
       - ${LOCAL_AI_DEPLOY}/n8n:/home/node/.n8n
+      # Shared AI data lake (read/write)
       - ${LOCAL_AI_DATA}:/data/local-ai
-      - ./DevOps/Local/n8n-import:/import
-
     ports:
       - "9567:5678"
-      
-
-
