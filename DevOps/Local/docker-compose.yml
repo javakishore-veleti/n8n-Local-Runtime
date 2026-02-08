@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
 
   postgres:
@@ -42,7 +44,6 @@ services:
       NEO4J_PLUGINS: '["graph-data-science"]'
     volumes:
       - ${LOCAL_AI_DEPLOY}/neo4j:/data
-      # Shared AI data lake (read/write)
       - ${LOCAL_AI_DATA}:/data/local-ai
     ports:
       - "9474:7474"
@@ -54,10 +55,29 @@ services:
     restart: unless-stopped
     volumes:
       - ${LOCAL_AI_DEPLOY}/mongodb:/data/db
-      # Shared AI data lake (read/write)
       - ${LOCAL_AI_DATA}:/data/local-ai
     ports:
       - "9017:27017"
+
+  redis:
+    image: redis:7
+    container_name: local-n8n-platform-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - ${LOCAL_AI_DEPLOY}/redis:/data
+    ports:
+      - "9637:6379"
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.1
+    container_name: local-n8n-platform-qdrant
+    restart: unless-stopped
+    volumes:
+      - ${LOCAL_AI_DEPLOY}/qdrant:/qdrant/storage
+    ports:
+      - "9633:6333"
+      - "9634:6334"
 
   prometheus:
     image: prom/prometheus
@@ -65,7 +85,7 @@ services:
     restart: unless-stopped
     volumes:
       - ${LOCAL_AI_DEPLOY}/prometheus:/prometheus
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
       - "9909:9090"
 
@@ -87,7 +107,21 @@ services:
       - "9437:4317"
       - "9438:4318"
 
-  # 🔹 N8N UI + AI Orchestration
+  # 🔹 Execution Runtime (Python, Node, AWS CLI, etc.)
+  data-analysis-stack:
+    image: vavkkishoreusa/data-analysis-stack:latest
+    container_name: local-data-analysis-runner
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      SERVER_MODE: "true"
+      AI_DATA_BASE_PATH: /data/local-ai/my_profile_data
+    volumes:
+      - ${LOCAL_AI_DATA}:/data/local-ai
+      - ./scripts:/workspace/scripts
+    working_dir: /workspace
+
+  # 🔹 n8n (Orchestrator)
   n8n:
     image: n8nio/n8n:latest
     container_name: local-n8n-platform-n8n
@@ -96,24 +130,21 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DB_TYPE: postgresdb
-      DB_POSTGRESDB_HOST: postgres
-      DB_POSTGRESDB_PORT: 5432
-      DB_POSTGRESDB_DATABASE: n8n
-      DB_POSTGRESDB_USER: n8n
-      DB_POSTGRESDB_PASSWORD: n8n
-
-      N8N_HOST: localhost
-      N8N_PORT: 5678
-      N8N_PROTOCOL: http
-      NODE_ENV: development
-      GENERIC_TIMEZONE: UTC
-
-      # Convention (documented, not required)
-      AI_DATA_BASE_PATH: /data/local-ai/my_ai_profiles
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=n8n
+      - DB_POSTGRESDB_PASSWORD=n8n
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=development
+      - GENERIC_TIMEZONE=UTC
+      - AI_DATA_BASE_PATH=/data/local-ai/my_profile_data
+      - NODES_EXCLUDE=[]
     volumes:
       - ${LOCAL_AI_DEPLOY}/n8n:/home/node/.n8n
-      # Shared AI data lake (read/write)
       - ${LOCAL_AI_DATA}:/data/local-ai
     ports:
       - "9567:5678"

@@ -1,59 +1,47 @@
-#!/usr/bin/env sh
+#!/bin/sh
 set -e
 
-echo "🚀 Starting local-n8n-platform..."
+# Resolve user home (portable)
+USER_HOME="$(cd ~ && pwd)"
 
-USER_HOME="$HOME"
-if [ -z "$USER_HOME" ]; then
-  echo "❌ HOME is not set"
-  exit 1
-fi
+# Absolute paths (NO ~ anywhere)
+LOCAL_AI_DATA="${USER_HOME}/runtime_data/local-ai-data/n8n-local-data"
+LOCAL_AI_DEPLOY="${USER_HOME}/runtime_data/local-ai-data/n8n-local-deployment-data"
+export MY_PROFILE_DATA="${LOCAL_AI_DATA}/my_profile_data"
 
-# Base AI data lake (tool-agnostic)
-export LOCAL_AI_DATA="${LOCAL_AI_DATA:-$USER_HOME/runtime_data/local-ai-data}"
+# Export for docker compose
+export LOCAL_AI_DATA
+export LOCAL_AI_DEPLOY
 
-# Deployment-specific data
-export LOCAL_AI_DEPLOY="${LOCAL_AI_DEPLOY:-$USER_HOME/runtime_data/local-ai-deployment}"
-
-# Normalize paths for Windows Git Bash
-case "$(uname -s)" in
-  MINGW*|MSYS*)
-    LOCAL_AI_DATA="$(cd "$LOCAL_AI_DATA" && pwd -W)"
-    LOCAL_AI_DEPLOY="$(cd "$LOCAL_AI_DEPLOY" && pwd -W)"
-    ;;
-esac
-
-echo "📁 LOCAL_AI_DATA=$LOCAL_AI_DATA"
-echo "📁 LOCAL_AI_DEPLOY=$LOCAL_AI_DEPLOY"
-
-# -------------------------------
-# Create base directories
-# -------------------------------
+# Create required directories (idempotent)
 mkdir -p \
-  "$LOCAL_AI_DATA/my_profile_data" \
-  "$LOCAL_AI_DEPLOY/n8n" \
-  "$LOCAL_AI_DEPLOY/postgres" \
-  "$LOCAL_AI_DEPLOY/pgadmin" \
-  "$LOCAL_AI_DEPLOY/grafana" \
-  "$LOCAL_AI_DEPLOY/prometheus" \
-  "$LOCAL_AI_DEPLOY/neo4j" \
-  "$LOCAL_AI_DEPLOY/mongodb"
+  "${LOCAL_AI_DATA}" \
+  "${LOCAL_AI_DEPLOY}/n8n" \
+  "${LOCAL_AI_DEPLOY}/postgres" \
+  "${LOCAL_AI_DEPLOY}/pgadmin" \
+  "${LOCAL_AI_DEPLOY}/grafana" \
+  "${LOCAL_AI_DEPLOY}/prometheus" \
+  "${LOCAL_AI_DEPLOY}/neo4j" \
+  "${LOCAL_AI_DEPLOY}/mongodb" \
+  "${LOCAL_AI_DEPLOY}/redis" \
+  "${LOCAL_AI_DEPLOY}/qdrant"
 
-# -------------------------------
-# Create profile subfolders (idempotent)
-# -------------------------------
-PROFILE_BASE="$LOCAL_AI_DATA/my_profile_data"
+echo "✅ local-n8n-platform directories ready"
+echo "📁 LOCAL_AI_DATA   = ${LOCAL_AI_DATA}"
+echo "📁 LOCAL_AI_DEPLOY = ${LOCAL_AI_DEPLOY}"
 
+# --- Create profile data folders ---
 mkdir -p \
-  "$PROFILE_BASE/demographics/do-not-consider" \
-  "$PROFILE_BASE/travel-preferences/do-not-consider" \
-  "$PROFILE_BASE/banking-preferences/do-not-consider" \
-  "$PROFILE_BASE/car-driving-preferences/do-not-consider" \
-  "$PROFILE_BASE/recreation-preferences/do-not-consider"
+  "${MY_PROFILE_DATA}/demographics/do-not-consider" \
+  "${MY_PROFILE_DATA}/travel-preferences/do-not-consider" \
+  "${MY_PROFILE_DATA}/banking-preferences/do-not-consider" \
+  "${MY_PROFILE_DATA}/car-driving-preferences/do-not-consider" \
+  "${MY_PROFILE_DATA}/recreation-preferences/do-not-consider"
 
-echo "✅ Local AI data lake and profile structure ready"
+echo "✅ local-n8n-platform directories ready"
 
-# -------------------------------
-# Start Docker Compose
-# -------------------------------
-docker compose -f DevOps/Local/docker-compose.yml up -d
+
+# Start stack (env vars passed explicitly)
+docker compose \
+  -f DevOps/Local/docker-compose.yml \
+  up -d

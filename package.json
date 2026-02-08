@@ -10,13 +10,17 @@
     "logs": "docker compose -f DevOps/Local/docker-compose.yml logs -f",
     "logs:n8n": "docker compose -f DevOps/Local/docker-compose.yml logs -f n8n",
 
-    "open:n8n": "open http://localhost:9567",
-    "open:neo4j": "open http://localhost:9474",
-    "open:pgadmin": "open http://localhost:9505",
-    "open:grafana": "open http://localhost:9300",
-    "open:prometheus": "open http://localhost:9909",
-    "open:jaeger": "open http://localhost:9668",
+    "open:n8n": "npx open-cli http://localhost:9567",
+    "open:neo4j": "npx open-cli http://localhost:9474",
+    "open:pgadmin": "npx open-cli http://localhost:9505",
+    "open:grafana": "npx open-cli http://localhost:9300",
+    "open:prometheus": "npx open-cli http://localhost:9909",
+    "open:jaeger": "npx open-cli http://localhost:9668",
+    "open:qdrant": "npx open-cli http://localhost:9633",
 
-    "open:all": "npm run open:n8n && npm run open:neo4j && npm run open:pgadmin && npm run open:grafana && npm run open:prometheus && npm run open:jaeger"
+    "open:all": "npm run open:n8n && npm run open:neo4j && npm run open:pgadmin && npm run open:grafana && npm run open:prometheus && npm run open:jaeger && npm run open:qdrant"
+  },
+  "devDependencies": {
+    "open-cli": "^8.0.0"
   }
 }
