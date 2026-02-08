@@ -9,7 +9,7 @@
         0,
         0
       ],
-      "id": "ba968883-50c3-4d4d-8dff-8b257d25d0e5",
+      "id": "f70b0000-b990-47d6-805d-1b8432048aac",
       "name": "Trigger – Index Profile Data"
     },
     {
@@ -22,12 +22,12 @@
         208,
         0
       ],
-      "id": "2ce03fe9-b2ce-4331-86a0-ef36c372c86f",
+      "id": "dabfb47b-3295-42fe-8127-3815d0576a56",
       "name": "Discover Profile Files"
     },
     {
       "parameters": {
-        "jsCode": "const raw = $input.first().json.stdout;\nreturn JSON.parse(raw).map(item => ({ json: item }));\n"
+        "jsCode": "/**\n * Input:\n *  stdout = newline-separated file paths\n *\n * Output:\n *  One item per file with metadata\n */\n\nconst stdout = $input.first().json.stdout || \"\";\n\nconst files = stdout\n  .split(\"\\n\")\n  .map(f => f.trim())\n  .filter(f => f.length > 0);\n\nreturn files.map(filePath => {\n  const ext = filePath.split(\".\").pop().toLowerCase();\n\n  let fileType = \"unknown\";\n  if (ext === \"md\") fileType = \"md\";\n  else if (ext === \"docx\") fileType = \"docx\";\n  else if (ext === \"xlsx\") fileType = \"xlsx\";\n\n  return {\n    json: {\n      file_path: filePath,\n      file_type: fileType,\n      category: filePath.split(\"/\").slice(-2, -1)[0]\n    }\n  };\n});\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -35,7 +35,7 @@
         416,
         0
       ],
-      "id": "893f81c6-00e2-4361-abbb-3102425da8f5",
+      "id": "685ea502-ad79-4b91-9bc6-4ea314616d4a",
       "name": "Parse File List"
     },
     {
@@ -63,6 +63,52 @@
                 ],
                 "combinator": "and"
               }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e7df7f54-53ee-4528-8161-e9c5847ec0bf",
+                    "leftValue": "={{$json.file_type}}",
+                    "rightValue": "docx",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0e4d56c3-40ec-468f-950c-97f57b450055",
+                    "leftValue": "={{$json.file_type}}\n",
+                    "rightValue": "xlsx",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
             }
           ]
         },
@@ -74,8 +120,23 @@
         624,
         0
       ],
-      "id": "822e3352-ca13-4b31-9bf3-833af56aba5d",
-      "name": "Switch",
+      "id": "a791a916-ba14-4f8a-8e1b-efa027640949",
+      "name": "Route by File Type",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "executeOnce": false,
+        "command": "=node /workspace/scripts/03_parse_docx.js \"{{ $json.file_path }}\" \"{{ $json.category }}\"\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        976,
+        64
+      ],
+      "id": "75b889ba-a805-4682-ad26-fe6f220c87d2",
+      "name": "Execute Command",
       "alwaysOutputData": true
     }
   ],
@@ -107,7 +168,19 @@
       "main": [
         [
           {
-            "node": "Switch",
+            "node": "Route by File Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by File Type": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Execute Command",
             "type": "main",
             "index": 0
           }
@@ -121,10 +194,10 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "c771e405-0aa0-452b-a688-463501251ed9",
+  "versionId": "a0ab2a14-f3a4-4c77-bb19-b76eda248f55",
   "meta": {
-    "instanceId": "61dbaea61db123f26d7000a46cc8b4efedbbdd267ae9ef4f48207aa8dbd81f09"
+    "instanceId": "d543eca0af1cda9db3f8428b169ac66ab965b04cb17af6f1709e01236519b0a7"
   },
-  "id": "roYJw1ltU4s4NAO-cy0RW",
+  "id": "xdBXSs9D9Y-0bcbJ5Hlcx",
   "tags": []
 }
