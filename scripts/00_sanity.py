@@ -1,35 +1,27 @@
-#!/usr/bin/env python3
-
 import os
 import json
-from pathlib import Path
 
-BASE_PATH = os.environ.get(
-    "AI_DATA_BASE_PATH",
-    "/data/local-ai/my_profile_data"
-)
+BASE_PATH = "/data/my_profile_data"
 
-def scan_directory(base_path: Path):
-    result = {
-        "exists": base_path.exists(),
-        "path": str(base_path),
-        "categories": {}
-    }
+result = {
+    "base_path": BASE_PATH,
+    "exists": False,
+    "folders": {}
+}
 
-    if not base_path.exists():
-        return result
+if os.path.isdir(BASE_PATH):
+    result["exists"] = True
 
-    for item in base_path.iterdir():
-        if item.is_dir():
-            file_count = sum(
-                1 for f in item.rglob("*") if f.is_file()
-            )
-            result["categories"][item.name] = {
-                "files": file_count
+    for entry in sorted(os.listdir(BASE_PATH)):
+        folder_path = os.path.join(BASE_PATH, entry)
+        if os.path.isdir(folder_path):
+            file_count = 0
+            for _, _, files in os.walk(folder_path):
+                file_count += len(files)
+
+            result["folders"][entry] = {
+                "path": folder_path,
+                "file_count": file_count
             }
 
-    return result
-
-if __name__ == "__main__":
-    output = scan_directory(Path(BASE_PATH))
-    print(json.dumps(output, indent=2))
+print(json.dumps(result, indent=2))

@@ -7,7 +7,7 @@ USER_HOME="$(cd ~ && pwd)"
 # Absolute paths (NO ~ anywhere)
 LOCAL_AI_DATA="${USER_HOME}/runtime_data/local-ai-data/n8n-local-data"
 LOCAL_AI_DEPLOY="${USER_HOME}/runtime_data/local-ai-data/n8n-local-deployment-data"
-export MY_PROFILE_DATA="${LOCAL_AI_DATA}/my_profile_data"
+export MY_PROFILE_DATA="${USER_HOME}/runtime_data/local-ai-data/my_profile_data"
 
 # Export for docker compose
 export LOCAL_AI_DATA
