@@ -6,7 +6,12 @@
  * Purpose:
  * - Verify that the profile data base directory exists
  * - List top-level category folders
- * - Count files recursively under each category
+ * - Count direct (non-hidden) files inside each category
+ *
+ * Rules:
+ * - Skip hidden files/folders (e.g. .DS_Store)
+ * - Skip "do-not-consider" directories entirely
+ * - Do NOT recurse into subfolders
  *
  * Output:
  * - JSON (printed to stdout)
@@ -20,30 +25,18 @@ const fs = require("fs");
 const path = require("path");
 
 // Base path mounted into n8n via docker-compose
-// const BASE_PATH =
-//  process.env.MY_PROFILE_DATA_HOST_PATH || "/data/my_profile_data";
-
 const BASE_PATH = "/data/my_profile_data";
 
 /**
- * Recursively count files in a directory
+ * Count only direct, visible files in a directory
  */
-function countFilesRecursive(dirPath) {
-  let count = 0;
-
+function countDirectFiles(dirPath) {
   const entries = fs.readdirSync(dirPath, { withFileTypes: true });
 
-  for (const entry of entries) {
-    const fullPath = path.join(dirPath, entry.name);
-
-    if (entry.isFile()) {
-      count++;
-    } else if (entry.isDirectory()) {
-      count += countFilesRecursive(fullPath);
-    }
-  }
-
-  return count;
+  return entries.filter(entry =>
+    entry.isFile() &&
+    !entry.name.startsWith(".") // skips .DS_Store and all hidden files
+  ).length;
 }
 
 /**
@@ -65,15 +58,23 @@ function runSanityCheck(basePath) {
   const topLevelEntries = fs.readdirSync(basePath, { withFileTypes: true });
 
   for (const entry of topLevelEntries) {
-    if (entry.isDirectory()) {
-      const categoryPath = path.join(basePath, entry.name);
-      const fileCount = countFilesRecursive(categoryPath);
+    // Skip non-directories
+    if (!entry.isDirectory()) continue;
 
-      result.categories[entry.name] = {
-        path: categoryPath,
-        file_count: fileCount
-      };
-    }
+    // Skip hidden folders
+    if (entry.name.startsWith(".")) continue;
+
+    // Skip do-not-consider folder
+    if (entry.name === "do-not-consider") continue;
+
+    const categoryPath = path.join(basePath, entry.name);
+
+    const fileCount = countDirectFiles(categoryPath);
+
+    result.categories[entry.name] = {
+      path: categoryPath,
+      file_count: fileCount
+    };
   }
 
   return result;

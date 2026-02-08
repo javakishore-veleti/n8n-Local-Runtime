@@ -1,0 +1,130 @@
+{
+  "name": "01 – Index My Profile Data (Vector Ingestion)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ba968883-50c3-4d4d-8dff-8b257d25d0e5",
+      "name": "Trigger – Index Profile Data"
+    },
+    {
+      "parameters": {
+        "command": "node /workspace/scripts/02_discover_files.js"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "2ce03fe9-b2ce-4331-86a0-ef36c372c86f",
+      "name": "Discover Profile Files"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.stdout;\nreturn JSON.parse(raw).map(item => ({ json: item }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "893f81c6-00e2-4361-abbb-3102425da8f5",
+      "name": "Parse File List"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.file_type}}",
+                    "rightValue": "md",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "1691ef8b-c51f-426b-822f-a1125bf1d4b1"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "822e3352-ca13-4b31-9bf3-833af56aba5d",
+      "name": "Switch",
+      "alwaysOutputData": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger – Index Profile Data": {
+      "main": [
+        [
+          {
+            "node": "Discover Profile Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discover Profile Files": {
+      "main": [
+        [
+          {
+            "node": "Parse File List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse File List": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "c771e405-0aa0-452b-a688-463501251ed9",
+  "meta": {
+    "instanceId": "61dbaea61db123f26d7000a46cc8b4efedbbdd267ae9ef4f48207aa8dbd81f09"
+  },
+  "id": "roYJw1ltU4s4NAO-cy0RW",
+  "tags": []
+}
