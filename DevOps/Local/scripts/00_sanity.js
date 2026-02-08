@@ -20,8 +20,10 @@ const fs = require("fs");
 const path = require("path");
 
 // Base path mounted into n8n via docker-compose
-const BASE_PATH =
-  process.env.AI_DATA_BASE_PATH || "/data/my_profile_data";
+// const BASE_PATH =
+//  process.env.MY_PROFILE_DATA_HOST_PATH || "/data/my_profile_data";
+
+const BASE_PATH = "/data/my_profile_data";
 
 /**
  * Recursively count files in a directory

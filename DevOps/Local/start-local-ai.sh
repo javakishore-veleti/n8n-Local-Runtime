@@ -13,6 +13,7 @@ export MY_PROFILE_DATA="${USER_HOME}/runtime_data/local-ai-data/my_profile_data"
 export LOCAL_AI_DATA
 export LOCAL_AI_DEPLOY
 
+
 # Create required directories (idempotent)
 mkdir -p \
   "${LOCAL_AI_DATA}" \
@@ -40,6 +41,10 @@ mkdir -p \
 
 echo "✅ local-n8n-platform directories ready"
 
+
+echo "MY_PROFILE_DATA ${MY_PROFILE_DATA}"
+echo "LOCAL_AI_DEPLOY ${LOCAL_AI_DEPLOY}"
+echo "LOCAL_AI_DATA ${LOCAL_AI_DATA}"
 
 # Start stack (env vars passed explicitly)
 docker compose \

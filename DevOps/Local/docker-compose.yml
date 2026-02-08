@@ -114,8 +114,8 @@ services:
     restart: unless-stopped
     environment:
       SERVER_MODE: "true"
-      AI_DATA_BASE_PATH: /data/local-ai/my_profile_data
-      MY_PROFILE_DATA_HOST_PATH: ${MY_PROFILE_DATA_HOST_PATH}
+      AI_DATA_BASE_PATH: /data/local-ai
+      MY_PROFILE_DATA_HOST_PATH: ${MY_PROFILE_DATA}
     volumes:
       - ${LOCAL_AI_DATA}:/data/local-ai
       - ${MY_PROFILE_DATA}:/data/my_profile_data
@@ -142,12 +142,13 @@ services:
       - N8N_PROTOCOL=http
       - NODE_ENV=development
       - GENERIC_TIMEZONE=UTC
-      - AI_DATA_BASE_PATH=/data/local-ai/my_profile_data
-      - MY_PROFILE_DATA_HOST_PATH=${MY_PROFILE_DATA_HOST_PATH}
+      - AI_DATA_BASE_PATH=/data/local-ai
+      - MY_PROFILE_DATA_HOST_PATH=${MY_PROFILE_DATA}
       - NODES_EXCLUDE=[]
     volumes:
       - ${LOCAL_AI_DEPLOY}/n8n:/home/node/.n8n
       - ${LOCAL_AI_DATA}:/data/local-ai
+      - ${MY_PROFILE_DATA}:/data/my_profile_data
       - ./scripts:/workspace/scripts
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
