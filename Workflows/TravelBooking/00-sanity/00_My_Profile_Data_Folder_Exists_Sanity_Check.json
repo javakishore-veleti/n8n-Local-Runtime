@@ -1,0 +1,167 @@
+{
+  "name": "00 – My Profile Data Folder Exists (Sanity Check)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        0
+      ],
+      "id": "c3ac91c1-2bbe-4dc2-a8db-8c83c43538ab",
+      "name": "Trigger – Manual Sanity Check"
+    },
+    {
+      "parameters": {
+        "command": "node /workspace/scripts/00_sanity.js"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        96,
+        0
+      ],
+      "id": "a9c8561b-aa63-46a9-9b4b-2f69108d3026",
+      "name": "Scan My Profile Data Folders (Shell)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.stdout;\n\nreturn [\n  {\n    json: JSON.parse(raw)\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        0
+      ],
+      "id": "30368e7a-a6ca-4559-953f-e77de552354f",
+      "name": "Parse Sanity Scan Output"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d9b88fb8-47bc-4002-9cca-d332cf7f7ffe",
+              "leftValue": "=={{ $json.exists }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        592,
+        0
+      ],
+      "id": "be33b54d-6ccc-413e-b86f-520cf286fc12",
+      "name": "IF – Profile Data Folder Exists?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const categories = $json.categories || {};\n\nconst rows = Object.entries(categories).map(([name, info]) => ({\n  category: name,\n  path: info.path,\n  file_count: info.file_count,\n}));\n\nreturn rows.map(row => ({ json: row }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -96
+      ],
+      "id": "d4372a22-c68f-431b-89fd-e52e3727a340",
+      "name": "Format Profile Data Summary (Table)"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nreturn [\n  {\n    json: {\n      status: 'missing',\n      message: 'My Profile Data folder does not exist',\n      action_required: 'Please create this folder on your host machine'\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        96
+      ],
+      "id": "4ec88165-4244-40e5-b1bb-45858395ef60",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger – Manual Sanity Check": {
+      "main": [
+        [
+          {
+            "node": "Scan My Profile Data Folders (Shell)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scan My Profile Data Folders (Shell)": {
+      "main": [
+        [
+          {
+            "node": "Parse Sanity Scan Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Sanity Scan Output": {
+      "main": [
+        [
+          {
+            "node": "IF – Profile Data Folder Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF – Profile Data Folder Exists?": {
+      "main": [
+        [
+          {
+            "node": "Format Profile Data Summary (Table)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "cc31c920-6766-4c61-bbce-295cc0dce54f",
+  "meta": {
+    "instanceId": "d081b57b90ea170968486ad68b930c6d2dd3f611a26e64a6da32932d329bbe4a"
+  },
+  "id": "zlU3XYI_1HUmHBNgIjQ1O",
+  "tags": []
+}
