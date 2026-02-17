@@ -1,0 +1,2284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSIUV — Product Architecture & Design</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --bg: #eef2f7;
+    --surface: #ffffff;
+    --surface2: #f0f4fa;
+    --surface3: #e8edf5;
+    --border: #c8d6e5;
+    --text: #dbe8f4;
+    --textMuted: #3d5a80;
+    --textDim: #5f7a9b;
+    --accent: #1a56db;
+    --accentLight: #1e40af;
+    --accentGlow: rgba(26,86,219,0.08);
+    --accentGlow2: rgba(26,86,219,0.04);
+    --success: #0e7c5f;
+    --successGlow: rgba(14,124,95,0.08);
+    --warn: #b45309;
+    --warnGlow: rgba(180,83,9,0.08);
+    --purple: #6d28d9;
+    --purpleGlow: rgba(109,40,217,0.08);
+    --red: #dc2626;
+    --redGlow: rgba(220,38,38,0.08);
+    --teal: #0f766e;
+    --tealGlow: rgba(15,118,110,0.08);
+    --pink: #be185d;
+    --pinkGlow: rgba(190,24,93,0.08);
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 32px;
+    min-height: 100vh;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .page-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .page-title {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 6px;
+    letter-spacing: -0.5px;
+  }
+
+  .page-subtitle {
+    font-size: 15px;
+    color: var(--textDim);
+    margin-bottom: 40px;
+    max-width: 700px;
+  }
+
+  /* ── Diagram Container ── */
+  .diagram {
+    position: relative;
+    width: 100%;
+    padding: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    margin-bottom: 32px;
+    overflow: hidden;
+  }
+
+  .diagram::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.4;
+  }
+
+  .diagram-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--textMuted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  /* ── SVG Styles ── */
+  svg { width: 100%; height: auto; }
+  
+  svg text {
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* ── Layers Diagram ── */
+  .layers-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .layer {
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+    padding: 20px 24px;
+    border-radius: 12px;
+    border: 1px solid;
+    position: relative;
+  }
+
+  .layer-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .layer-content {
+    flex: 1;
+  }
+
+  .layer-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .layer-desc {
+    font-size: 13px;
+    color: var(--textMuted);
+    line-height: 1.5;
+  }
+
+  .layer-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .layer-chip {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .layer--ai { border-color: rgba(139,92,246,0.3); background: var(--purpleGlow); }
+  .layer--ai .layer-number { background: rgba(139,92,246,0.2); color: #6d28d9; }
+  .layer--ai .layer-title { color: #6d28d9; }
+  .layer--ai .layer-chip { background: rgba(139,92,246,0.15); color: #6d28d9; }
+
+  .layer--skills { border-color: rgba(59,130,246,0.3); background: var(--accentGlow2); }
+  .layer--skills .layer-number { background: rgba(59,130,246,0.2); color: var(--accent); }
+  .layer--skills .layer-title { color: var(--accent); }
+  .layer--skills .layer-chip { background: rgba(26,86,219,0.1); color: #2563eb; }
+
+  .layer--registry { border-color: rgba(16,185,129,0.3); background: var(--successGlow); }
+  .layer--registry .layer-number { background: rgba(16,185,129,0.2); color: #0e7c5f; }
+  .layer--registry .layer-title { color: #0e7c5f; }
+  .layer--registry .layer-chip { background: rgba(14,124,95,0.1); color: #059669; }
+
+  /* ── Flow Diagram ── */
+  .flow-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: center;
+    padding: 20px 0;
+  }
+
+  .flow-step {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    max-width: 800px;
+  }
+
+  .flow-node {
+    flex: 1;
+    padding: 16px 20px;
+    border-radius: 10px;
+    border: 1px solid;
+    position: relative;
+  }
+
+  .flow-node-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+
+  .flow-node-desc {
+    font-size: 12px;
+    color: var(--textMuted);
+  }
+
+  .flow-arrow {
+    display: flex;
+    justify-content: center;
+    padding: 4px 0;
+    color: var(--textDim);
+    font-size: 18px;
+  }
+
+  .flow-badge {
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    position: absolute;
+    top: -8px;
+    right: 12px;
+  }
+
+  /* ── User Journey Cards ── */
+  .journey-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+  }
+
+  .persona-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .persona-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .persona-card--author::before { background: var(--accent); }
+  .persona-card--executor::before { background: var(--success); }
+  .persona-card--admin::before { background: var(--warn); }
+
+  .persona-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    font-size: 20px;
+  }
+
+  .persona-card--author .persona-icon { background: var(--accentGlow); }
+  .persona-card--executor .persona-icon { background: var(--successGlow); }
+  .persona-card--admin .persona-icon { background: var(--warnGlow); }
+
+  .persona-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .persona-role {
+    font-size: 12px;
+    color: var(--textDim);
+    margin-bottom: 16px;
+  }
+
+  .persona-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .persona-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--textMuted);
+    line-height: 1.4;
+  }
+
+  .step-num {
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .persona-card--author .step-num { background: rgba(59,130,246,0.2); color: var(--accent); }
+  .persona-card--executor .step-num { background: rgba(16,185,129,0.2); color: #0e7c5f; }
+  .persona-card--admin .step-num { background: rgba(245,158,11,0.2); color: #b45309; }
+
+  /* ── Component Diagram ── */
+  .components-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  .comp-group {
+    grid-column: span 4;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid;
+    position: relative;
+  }
+
+  .comp-group-label {
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .comp-box {
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .comp-name {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+
+  .comp-tech {
+    font-size: 11px;
+    color: var(--textDim);
+  }
+
+  /* ── Execution Pipeline ── */
+  .pipeline {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    overflow-x: auto;
+    padding: 20px 0 20px 0;
+  }
+
+  .pipe-node {
+    min-width: 140px;
+    text-align: center;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .pipe-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    border: 2px solid;
+    position: relative;
+  }
+
+  .pipe-label {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+
+  .pipe-sub {
+    font-size: 10px;
+    color: var(--textDim);
+    padding: 0 10px;
+  }
+
+  .pipe-connector {
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 20px;
+    flex-shrink: 0;
+  }
+
+  .pipe-connector svg {
+    width: 40px;
+    height: 20px;
+  }
+
+  /* ── SKILL.md Anatomy ── */
+  .skillmd-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .skillmd-section {
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid;
+  }
+
+  .skillmd-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .skillmd-section-label span {
+    width: 6px;
+    height: 6px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+
+  .skillmd-content {
+    font-size: 12px;
+    color: var(--textMuted);
+    line-height: 1.7;
+  }
+
+  .skillmd-content code {
+    background: rgba(26,86,219,0.06);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  .skillmd-full {
+    grid-column: span 2;
+  }
+
+  /* ── Data Flow ── */
+  .dataflow {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 10px 0;
+  }
+
+  .dataflow-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .dataflow-system {
+    width: 160px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .dataflow-system-name {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .dataflow-system-desc {
+    font-size: 10px;
+    color: var(--textDim);
+  }
+
+  .dataflow-arrow {
+    color: var(--textDim);
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .dataflow-data {
+    flex: 1;
+    padding: 8px 14px;
+    border-radius: 6px;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    font-size: 11px;
+    color: var(--textMuted);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  /* ── Dual Path ── */
+  .dual-path {
+    display: grid;
+    grid-template-columns: 1fr 60px 1fr;
+    gap: 0;
+    align-items: stretch;
+  }
+
+  .path-card {
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid;
+  }
+
+  .path-divider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .path-divider-line {
+    width: 1px;
+    flex: 1;
+    background: var(--border);
+  }
+
+  .path-divider-or {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--textDim);
+    letter-spacing: 1px;
+  }
+
+  .path-pct {
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+
+  .path-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .path-desc {
+    font-size: 13px;
+    color: var(--textMuted);
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+
+  .path-traits {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .path-trait {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--textMuted);
+  }
+
+  .path-trait-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Screen Layout ── */
+  .screen-mockup {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .screen-topbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .screen-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .screen-body {
+    display: flex;
+    min-height: 340px;
+  }
+
+  .screen-sidebar {
+    width: 200px;
+    padding: 16px;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sidebar-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--textDim);
+    cursor: default;
+  }
+
+  .sidebar-item--active {
+    background: var(--accentGlow);
+    color: var(--accent);
+  }
+
+  .sidebar-item--sub {
+    padding-left: 28px;
+    font-size: 11px;
+  }
+
+  .sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 6px 0;
+  }
+
+  .sidebar-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--textDim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 8px 12px 4px;
+  }
+
+  .screen-main {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .screen-main-title {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .mock-card {
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .mock-card-title {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .mock-field {
+    padding: 8px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--textDim);
+    margin-bottom: 6px;
+  }
+
+  .mock-btn {
+    padding: 8px 20px;
+    background: var(--accent);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+    display: inline-block;
+    margin-top: 8px;
+  }
+
+  /* ── Navigation ── */
+  .nav-bar {
+    position: sticky;
+    top: 0;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 32px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    z-index: 100;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .nav-logo {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--accent);
+    margin-right: 16px;
+  }
+
+  .nav-link {
+    font-size: 12px;
+    color: var(--textDim);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 4px 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .nav-link:hover {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+
+  @media print {
+    .page { page-break-after: always; }
+    .nav-bar { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════ NAVIGATION ════════ -->
+<div class="nav-bar">
+  <div class="nav-logo">SSIUV</div>
+  <a href="#intro" class="nav-link">Introduction</a>
+  <a href="#claude-skills" class="nav-link">Claude Skills</a>
+  <a href="#arch" class="nav-link">Architecture</a>
+  <a href="#layers" class="nav-link">Three Layers</a>
+  <a href="#skillmd" class="nav-link">SKILL.md</a>
+  <a href="#execution" class="nav-link">Execution Flow</a>
+  <a href="#dual" class="nav-link">Dual Path</a>
+  <a href="#temporal-dev" class="nav-link">Temporal Dev</a>
+  <a href="#sales-mcp" class="nav-link">Sales MCP</a>
+  <a href="#pipeline" class="nav-link">Pipeline</a>
+  <a href="#users" class="nav-link">User Journeys</a>
+  <a href="#components" class="nav-link">Components</a>
+  <a href="#screens" class="nav-link">UI Layout</a>
+</div>
+
+<!-- ════════ INTRODUCTION ════════ -->
+<div class="page" id="intro" style="display: flex; flex-direction: column; justify-content: flex-start;">
+  
+  <!-- Header -->
+  <div style="margin-bottom: 32px;">
+    <div style="font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: 2px; margin-bottom: 8px;">SSIUV</div>
+    <div style="font-size: 32px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; margin-bottom: 6px;">Sales Services Intelligent Unified Validations</div>
+    <div style="font-size: 15px; color: var(--textDim); max-width: 700px;">Skills-based test validation platform for end-to-end integration testing across digital sales services.</div>
+  </div>
+
+  <!-- What This Is -->
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; position: relative; overflow: hidden;">
+    <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent);"></div>
+    <div style="font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--accent); margin-bottom: 10px;">WHAT THIS IS</div>
+    <div style="font-size: 14px; color: var(--text); line-height: 1.7;">A platform where QA engineers define test scenarios as SKILL.md files and business users execute them on-demand. The AI reads the skill, calls the APIs, passes data between steps, checks results, and returns a pass/fail report. Business users provide input criteria through a form or Excel file. They do not need to know API endpoints, authentication, or data formats.</div>
+  </div>
+
+  <!-- How It Works (factual) -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; position: relative; overflow: hidden;">
+      <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--purple);"></div>
+      <div style="font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--purple); margin-bottom: 14px;">HOW IT WORKS</div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <div style="width: 24px; height: 24px; border-radius: 6px; background: var(--purpleGlow); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; font-weight: 700; color: #6d28d9;">1</div>
+          <div style="font-size: 13px; color: var(--textMuted); line-height: 1.5;">QA engineer writes a SKILL.md file defining the test scenario — inputs needed, APIs to call, data to pass between steps, what to assert.</div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <div style="width: 24px; height: 24px; border-radius: 6px; background: var(--purpleGlow); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; font-weight: 700; color: #6d28d9;">2</div>
+          <div style="font-size: 13px; color: var(--textMuted); line-height: 1.5;">Skill is uploaded to the platform. Platform validates it and stores it in the skill library.</div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <div style="width: 24px; height: 24px; border-radius: 6px; background: var(--purpleGlow); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; font-weight: 700; color: #6d28d9;">3</div>
+          <div style="font-size: 13px; color: var(--textMuted); line-height: 1.5;">Business user selects the skill, fills in criteria (model year, make, country, channels, etc.) via a dynamic form or Excel upload.</div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <div style="width: 24px; height: 24px; border-radius: 6px; background: var(--purpleGlow); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; font-weight: 700; color: #6d28d9;">4</div>
+          <div style="font-size: 13px; color: var(--textMuted); line-height: 1.5;">AI reads the SKILL.md, authenticates with each API via JWT, executes the workflow steps, evaluates assertions, returns results.</div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <div style="width: 24px; height: 24px; border-radius: 6px; background: var(--purpleGlow); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; font-weight: 700; color: #6d28d9;">5</div>
+          <div style="font-size: 13px; color: var(--textMuted); line-height: 1.5;">Results show pass/fail per step with details. Failed steps include error information and response data for investigation.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Key Design Decisions -->
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; position: relative; overflow: hidden;">
+      <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--warn);"></div>
+      <div style="font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--warn); margin-bottom: 14px;">KEY DESIGN DECISIONS</div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <div style="font-size: 13px; font-weight: 600; color: #b45309; flex-shrink: 0;">SKILL.md is the contract.</div>
+          <div style="font-size: 12px; color: var(--textDim); line-height: 1.5;">One file defines everything — inputs, workflow, assertions. Both humans and AI read it.</div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <div style="font-size: 13px; font-weight: 600; color: #b45309; flex-shrink: 0;">Credentials are centralized.</div>
+          <div style="font-size: 12px; color: var(--textDim); line-height: 1.5;">Service Registry holds all API auth. Skills reference services by name. No tokens in skill files.</div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <div style="font-size: 13px; font-weight: 600; color: #b45309; flex-shrink: 0;">Two execution paths.</div>
+          <div style="font-size: 12px; color: var(--textDim); line-height: 1.5;">AI handles ~95% of skills dynamically. Critical skills that need 100% determinism get implemented as Temporal workflows using the same SKILL.md as the spec.</div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <div style="font-size: 13px; font-weight: 600; color: #b45309; flex-shrink: 0;">Optional scripts.</div>
+          <div style="font-size: 12px; color: var(--textDim); line-height: 1.5;">Skills can include .sh, .py, or .js files for logic too complex for AI to handle reliably (EventHub listeners, custom validators). Most skills need only the SKILL.md.</div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <div style="font-size: 13px; font-weight: 600; color: #b45309; flex-shrink: 0;">Async execution.</div>
+          <div style="font-size: 12px; color: var(--textDim); line-height: 1.5;">Runs can take minutes (batch, EventHub waits). Users don't need to keep the page open. Results are stored and searchable.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════ CLAUDE SKILLS EXPLAINER ════════ -->
+<div class="page" id="claude-skills">
+  <div class="page-label">Reference</div>
+  <div class="page-title">What Are Claude Skills?</div>
+  <div class="page-subtitle">How the Anthropic SKILL.md pattern works and how SSIUV applies it to test validation.</div>
+
+  <div class="diagram">
+    <div class="diagram-title">THE SKILL.MD PATTERN</div>
+
+    <!-- What is it -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+      <div style="padding: 20px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;">
+        <div style="font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 10px;">WHAT IS A SKILL?</div>
+        <div style="font-size: 13px; color: var(--textMuted); line-height: 1.7;">
+          A Skill is a markdown file (<code style="background: rgba(26,86,219,0.06); padding: 1px 6px; border-radius: 3px; font-family: monospace; font-size: 12px; color: #1a56db;">SKILL.md</code>) that gives an AI model instructions on how to accomplish a specific task. Anthropic introduced this pattern for Claude — the AI reads the file at runtime and follows the instructions to perform work.
+          <br><br>
+          The file is plain text. It is readable by both humans and AI. It describes what to do, what inputs are needed, and what outputs to produce. It can optionally be packaged with supporting code files (.sh, .py, .js) for operations the AI should delegate to scripts.
+        </div>
+      </div>
+      <div style="padding: 20px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;">
+        <div style="font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--success); margin-bottom: 10px;">HOW DOES THE AI USE IT?</div>
+        <div style="font-size: 13px; color: var(--textMuted); line-height: 1.7;">
+          At execution time, the AI model (Claude) receives the SKILL.md content as context. It reads the instructions, understands the task, and executes it — making API calls, processing data, evaluating conditions, and generating output.
+          <br><br>
+          The AI does not need pre-compiled code or a fixed workflow engine. It interprets the SKILL.md dynamically. This means new skills can be created by writing a markdown file — no code deployment required. The skill author writes instructions; the AI follows them.
+        </div>
+      </div>
+    </div>
+
+    <!-- How SSIUV uses it -->
+    <div style="padding: 20px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 24px;">
+      <div style="font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--purple); margin-bottom: 10px;">HOW SKILLFORGE APPLIES THIS PATTERN</div>
+      <div style="font-size: 13px; color: var(--textMuted); line-height: 1.7; margin-bottom: 16px;">
+        SSIUV extends the SKILL.md pattern with structured sections that the platform can parse and act on. A standard Anthropic skill is free-form instructions. A SSIUV skill adds machine-readable sections for input collection (UICriteria), workflow steps (WorkflowDefinition), and output formatting (OutputDefinition).
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--textMuted); margin-bottom: 8px;">Standard Anthropic SKILL.md</div>
+          <div style="padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; color: var(--textDim); line-height: 1.8; white-space: pre-wrap;">---
+name: example-skill
+description: Does a specific task
+---
+
+# Instructions
+
+When the user asks you to do X,
+follow these steps:
+
+1. Do this first
+2. Then do this
+3. Check the result</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--textMuted); margin-bottom: 8px;">SSIUV SKILL.md (extended)</div>
+          <div style="padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; color: var(--textDim); line-height: 1.8; white-space: pre-wrap;">---
+name: test-gmc-offers
+version: 1.0
+execution_mode: ai
+---
+
+<span style="color: #0e7c5f;">&lt;UICriteria&gt;</span>
+  <span style="color: #64748b;">&lt;Type&gt;</span>HTML<span style="color: #64748b;">&lt;/Type&gt;</span>
+  <span style="color: #64748b;">&lt;Fields&gt;</span>{ "make": {...} }<span style="color: #64748b;">&lt;/Fields&gt;</span>
+<span style="color: #0e7c5f;">&lt;/UICriteria&gt;</span>
+
+<span style="color: #6d28d9;">&lt;WorkflowDefinition&gt;</span>
+  <span style="color: #6d28d9;">&lt;Tasks&gt;</span>
+    <span style="color: #64748b;">&lt;Task id="1" name="Create Vehicle"&gt;</span>
+      Service: TDI
+      Inputs: make={make}
+      Capture: vin, account_number
+      Assert: vin is not null
+    <span style="color: #64748b;">&lt;/Task&gt;</span>
+  <span style="color: #6d28d9;">&lt;/Tasks&gt;</span>
+<span style="color: #6d28d9;">&lt;/WorkflowDefinition&gt;</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- What each section does -->
+    <div style="font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--warn); margin-bottom: 12px;">SKILL.MD SECTIONS — WHAT EACH ONE DOES</div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px;">
+      <div style="padding: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; border-top: 3px solid var(--accent);">
+        <div style="font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 6px;">Metadata</div>
+        <div style="font-size: 11px; color: var(--textDim); line-height: 1.6;">YAML front matter. Contains the skill name, version, author, tags, and execution mode (ai or workflow). The platform uses this for the skill library — search, filtering, display.</div>
+      </div>
+      <div style="padding: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; border-top: 3px solid var(--success);">
+        <div style="font-size: 12px; font-weight: 700; color: #0e7c5f; margin-bottom: 6px;">UICriteria</div>
+        <div style="font-size: 11px; color: var(--textDim); line-height: 1.6;">Tells the platform what inputs to collect from the user. Defines whether to show an HTML form, accept an Excel file, or both. For HTML, specifies each field: name, type (text, select, multi-select, checkbox), options, defaults, required flag.</div>
+      </div>
+      <div style="padding: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; border-top: 3px solid var(--purple);">
+        <div style="font-size: 12px; font-weight: 700; color: #6d28d9; margin-bottom: 6px;">WorkflowDefinition</div>
+        <div style="font-size: 11px; color: var(--textDim); line-height: 1.6;">Ordered list of Tasks. Each task names a service and operation from the Service Registry, maps inputs (from user criteria or prior task outputs using <code style="font-family: monospace; font-size: 10px; color: #6d28d9;">{Task1.vin}</code> notation), declares what to capture from the response, and defines assertions to evaluate.</div>
+      </div>
+      <div style="padding: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; border-top: 3px solid var(--pink);">
+        <div style="font-size: 12px; font-weight: 700; color: #be185d; margin-bottom: 6px;">OutputDefinition</div>
+        <div style="font-size: 11px; color: var(--textDim); line-height: 1.6;">Optional. Tells the AI how to format the results report — what summary table to show, which fields to highlight, how to group results. Written in plain language; the AI interprets it.</div>
+      </div>
+      <div style="padding: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; border-top: 3px solid var(--warn);">
+        <div style="font-size: 12px; font-weight: 700; color: #b45309; margin-bottom: 6px;">Scripts</div>
+        <div style="font-size: 11px; color: var(--textDim); line-height: 1.6;">Optional. Maps specific tasks to .sh, .py, or .js files included in the skill package. Used for logic that's too complex or sensitive for AI to handle dynamically — EventHub listeners, custom data transformations, external validations.</div>
+      </div>
+      <div style="padding: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; border-top: 3px solid var(--teal);">
+        <div style="font-size: 12px; font-weight: 700; color: #0f766e; margin-bottom: 6px;">Workflow Constructs</div>
+        <div style="font-size: 11px; color: var(--textDim); line-height: 1.6;">Tasks support: <strong style="color: var(--textMuted);">loops</strong> (<code style="font-family: monospace; font-size: 10px;">for each channel in {channels}</code>), <strong style="color: var(--textMuted);">conditionals</strong> (<code style="font-family: monospace; font-size: 10px;">Assert if {validate_tax}:</code>), <strong style="color: var(--textMuted);">optional tasks</strong>, and <strong style="color: var(--textMuted);">wait/poll</strong> with configurable timeout and interval.</div>
+      </div>
+    </div>
+
+    <!-- How execution works mechanically -->
+    <div style="padding: 20px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;">
+      <div style="font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--teal); margin-bottom: 10px;">WHAT HAPPENS AT RUNTIME</div>
+      <div style="display: flex; gap: 8px; align-items: stretch;">
+        <div style="flex: 1; padding: 12px; background: var(--surface); border-radius: 6px; border: 1px solid var(--border); text-align: center;">
+          <div style="font-size: 18px; margin-bottom: 4px;">📄</div>
+          <div style="font-size: 10px; font-weight: 600; color: var(--accent); margin-bottom: 4px;">Load</div>
+          <div style="font-size: 10px; color: var(--textDim);">Read SKILL.md from storage</div>
+        </div>
+        <div style="display: flex; align-items: center; color: var(--textDim);">→</div>
+        <div style="flex: 1; padding: 12px; background: var(--surface); border-radius: 6px; border: 1px solid var(--border); text-align: center;">
+          <div style="font-size: 18px; margin-bottom: 4px;">🔍</div>
+          <div style="font-size: 10px; font-weight: 600; color: var(--accent); margin-bottom: 4px;">Parse</div>
+          <div style="font-size: 10px; color: var(--textDim);">Extract sections: criteria, tasks, assertions</div>
+        </div>
+        <div style="display: flex; align-items: center; color: var(--textDim);">→</div>
+        <div style="flex: 1; padding: 12px; background: var(--surface); border-radius: 6px; border: 1px solid var(--border); text-align: center;">
+          <div style="font-size: 18px; margin-bottom: 4px;">🔗</div>
+          <div style="font-size: 10px; font-weight: 600; color: #0e7c5f; margin-bottom: 4px;">Resolve</div>
+          <div style="font-size: 10px; color: var(--textDim);">Look up services in Registry, get URLs + creds</div>
+        </div>
+        <div style="display: flex; align-items: center; color: var(--textDim);">→</div>
+        <div style="flex: 1; padding: 12px; background: var(--surface); border-radius: 6px; border: 1px solid var(--border); text-align: center;">
+          <div style="font-size: 18px; margin-bottom: 4px;">🔑</div>
+          <div style="font-size: 10px; font-weight: 600; color: #b45309; margin-bottom: 4px;">Auth</div>
+          <div style="font-size: 10px; color: var(--textDim);">Get JWT tokens from token server per API</div>
+        </div>
+        <div style="display: flex; align-items: center; color: var(--textDim);">→</div>
+        <div style="flex: 1; padding: 12px; background: var(--surface); border-radius: 6px; border: 1px solid var(--border); text-align: center;">
+          <div style="font-size: 18px; margin-bottom: 4px;">⚡</div>
+          <div style="font-size: 10px; font-weight: 600; color: #6d28d9; margin-bottom: 4px;">Execute</div>
+          <div style="font-size: 10px; color: var(--textDim);">Call APIs in order, pass data between tasks</div>
+        </div>
+        <div style="display: flex; align-items: center; color: var(--textDim);">→</div>
+        <div style="flex: 1; padding: 12px; background: var(--surface); border-radius: 6px; border: 1px solid var(--border); text-align: center;">
+          <div style="font-size: 18px; margin-bottom: 4px;">✅</div>
+          <div style="font-size: 10px; font-weight: 600; color: #0e7c5f; margin-bottom: 4px;">Assert</div>
+          <div style="font-size: 10px; color: var(--textDim);">Check responses against defined assertions</div>
+        </div>
+        <div style="display: flex; align-items: center; color: var(--textDim);">→</div>
+        <div style="flex: 1; padding: 12px; background: var(--surface); border-radius: 6px; border: 1px solid var(--border); text-align: center;">
+          <div style="font-size: 18px; margin-bottom: 4px;">📋</div>
+          <div style="font-size: 10px; font-weight: 600; color: #be185d; margin-bottom: 4px;">Report</div>
+          <div style="font-size: 10px; color: var(--textDim);">Generate pass/fail results, store in history</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 1: HIGH-LEVEL ARCHITECTURE ════════ -->
+<div class="page" id="arch">
+  <div class="page-label">Diagram 1 of 9</div>
+  <div class="page-title">High-Level System Architecture</div>
+  <div class="page-subtitle">End-to-end view of how SSIUV connects business users to enterprise APIs through AI-powered skill execution.</div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 1000 620" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Background Grid -->
+      <defs>
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
+        </pattern>
+        <linearGradient id="blueGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#d0dff0"/>
+          <stop offset="100%" stop-color="#dbe8f4"/>
+        </linearGradient>
+        <linearGradient id="greenGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#d0f0e4"/>
+          <stop offset="100%" stop-color="#d8f0e8"/>
+        </linearGradient>
+        <linearGradient id="purpleGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#e0d4f5"/>
+          <stop offset="100%" stop-color="#e4ddf5"/>
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+        </filter>
+      </defs>
+      <rect width="1000" height="620" fill="url(#grid)"/>
+
+      <!-- USERS SECTION -->
+      <rect x="20" y="20" width="200" height="260" rx="12" fill="#ffffff" stroke="#c8d6e5" stroke-width="1"/>
+      <text x="120" y="50" text-anchor="middle" fill="#5f7a9b" font-size="10" font-weight="700" letter-spacing="2">USERS</text>
+      
+      <rect x="40" y="70" width="160" height="50" rx="8" fill="url(#blueGrad)" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="120" y="92" text-anchor="middle" fill="#1a56db" font-size="12" font-weight="600">Business Users</text>
+      <text x="120" y="107" text-anchor="middle" fill="#5f7a9b" font-size="9">Execute Skills</text>
+
+      <rect x="40" y="132" width="160" height="50" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="120" y="154" text-anchor="middle" fill="#0e7c5f" font-size="12" font-weight="600">QA Engineers</text>
+      <text x="120" y="169" text-anchor="middle" fill="#5f7a9b" font-size="9">Author Skills</text>
+
+      <rect x="40" y="194" width="160" height="50" rx="8" fill="rgba(180,83,9,0.06)" stroke="#f59e0b" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="120" y="216" text-anchor="middle" fill="#b45309" font-size="12" font-weight="600">Admins</text>
+      <text x="120" y="231" text-anchor="middle" fill="#5f7a9b" font-size="9">Manage Registry</text>
+
+      <!-- ARROWS: Users → Platform -->
+      <path d="M220 100 L280 100" stroke="#3b82f6" stroke-width="1.5" stroke-opacity="0.5" marker-end="url(#arrowBlue)"/>
+      <path d="M220 157 L280 200" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.5" marker-end="url(#arrowGreen)"/>
+      <path d="M220 219 L280 340" stroke="#f59e0b" stroke-width="1.5" stroke-opacity="0.5" marker-end="url(#arrowYellow)"/>
+      
+      <defs>
+        <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" opacity="0.6"/>
+        </marker>
+        <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" opacity="0.6"/>
+        </marker>
+        <marker id="arrowYellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b" opacity="0.6"/>
+        </marker>
+        <marker id="arrowPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b5cf6" opacity="0.6"/>
+        </marker>
+        <marker id="arrowWhite" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#4a6585" opacity="0.5"/>
+        </marker>
+      </defs>
+
+      <!-- PLATFORM CORE -->
+      <rect x="280" y="20" width="440" height="400" rx="12" fill="#ffffff" stroke="#c8d6e5" stroke-width="1"/>
+      <text x="500" y="50" text-anchor="middle" fill="#5f7a9b" font-size="10" font-weight="700" letter-spacing="2">SKILLFORGE PLATFORM</text>
+
+      <!-- React Frontend -->
+      <rect x="300" y="70" width="400" height="45" rx="8" fill="url(#blueGrad)" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="500" y="92" text-anchor="middle" fill="#1a56db" font-size="13" font-weight="700">React Frontend</text>
+      <text x="500" y="106" text-anchor="middle" fill="#6b829e" font-size="9">Definition  •  Execution  •  Favorites  •  History  •  Dashboard</text>
+
+      <!-- Backend API -->
+      <rect x="300" y="130" width="400" height="45" rx="8" fill="#1a2236" stroke="#c8d6e5" stroke-width="1"/>
+      <text x="500" y="152" text-anchor="middle" fill="#1a2744" font-size="13" font-weight="700">Backend API</text>
+      <text x="500" y="166" text-anchor="middle" fill="#6b829e" font-size="9">Java Spring Boot / Node.js / Python FastAPI</text>
+
+      <!-- Skills Storage -->
+      <rect x="300" y="192" width="190" height="60" rx="8" fill="#1a2236" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="395" y="218" text-anchor="middle" fill="#2563eb" font-size="12" font-weight="600">Skills Storage</text>
+      <text x="395" y="235" text-anchor="middle" fill="#6b829e" font-size="9">SKILL.md + Scripts</text>
+      <text x="395" y="247" text-anchor="middle" fill="#6b829e" font-size="9">Local / AWS S3</text>
+
+      <!-- Database -->
+      <rect x="510" y="192" width="190" height="60" rx="8" fill="#1a2236" stroke="#c8d6e5" stroke-width="1"/>
+      <text x="605" y="218" text-anchor="middle" fill="#1a2744" font-size="12" font-weight="600">PostgreSQL</text>
+      <text x="605" y="235" text-anchor="middle" fill="#6b829e" font-size="9">Skills Metadata</text>
+      <text x="605" y="247" text-anchor="middle" fill="#6b829e" font-size="9">Executions • Users</text>
+
+      <!-- AI Execution Engine -->
+      <rect x="300" y="270" width="250" height="60" rx="8" fill="url(#purpleGrad)" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="425" y="296" text-anchor="middle" fill="#6d28d9" font-size="13" font-weight="700">AI Execution Engine</text>
+      <text x="425" y="312" text-anchor="middle" fill="#7c3aed" font-size="9">Claude Sonnet / Opus</text>
+
+      <!-- Temporal -->
+      <rect x="565" y="270" width="135" height="60" rx="8" fill="rgba(190,24,93,0.06)" stroke="#ec4899" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="632" y="296" text-anchor="middle" fill="#be185d" font-size="12" font-weight="600">Temporal</text>
+      <text x="632" y="312" text-anchor="middle" fill="#5f7a9b" font-size="9">Hardened Path</text>
+
+      <!-- Service Registry -->
+      <rect x="300" y="348" width="400" height="55" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="500" y="373" text-anchor="middle" fill="#0e7c5f" font-size="13" font-weight="700">Service Registry</text>
+      <text x="500" y="390" text-anchor="middle" fill="#6b829e" font-size="9">API Endpoints  •  JWT Auth Config  •  Swagger Specs  •  Credentials Vault</text>
+
+      <!-- ARROWS: Platform → External -->
+      <path d="M700 375 L760 375" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.5" marker-end="url(#arrowGreen)"/>
+      <path d="M500 420 L500 450" stroke="#94a3b8" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4,4"/>
+
+      <!-- EXTERNAL APIs -->
+      <rect x="760" y="20" width="220" height="400" rx="12" fill="#ffffff" stroke="#c8d6e5" stroke-width="1"/>
+      <text x="870" y="50" text-anchor="middle" fill="#5f7a9b" font-size="10" font-weight="700" letter-spacing="2">ENTERPRISE APIs</text>
+
+      <rect x="780" y="70" width="180" height="42" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.25"/>
+      <text x="870" y="90" text-anchor="middle" fill="#059669" font-size="11" font-weight="600">TDI Service</text>
+      <text x="870" y="103" text-anchor="middle" fill="#6b829e" font-size="9">Vehicle / Customer Creation</text>
+
+      <rect x="780" y="124" width="180" height="42" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.25"/>
+      <text x="870" y="144" text-anchor="middle" fill="#059669" font-size="11" font-weight="600">Digital Sales Services</text>
+      <text x="870" y="157" text-anchor="middle" fill="#6b829e" font-size="9">Onboarding / Qualification</text>
+
+      <rect x="780" y="178" width="180" height="42" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.25"/>
+      <text x="870" y="198" text-anchor="middle" fill="#059669" font-size="11" font-weight="600">Offers Microservice</text>
+      <text x="870" y="211" text-anchor="middle" fill="#6b829e" font-size="9">Offer Qualification / Channels</text>
+
+      <rect x="780" y="232" width="180" height="42" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.25"/>
+      <text x="870" y="252" text-anchor="middle" fill="#059669" font-size="11" font-weight="600">Orders API</text>
+      <text x="870" y="265" text-anchor="middle" fill="#6b829e" font-size="9">Quotes / Orders / Fulfillment</text>
+
+      <rect x="780" y="286" width="180" height="42" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.25"/>
+      <text x="870" y="306" text-anchor="middle" fill="#059669" font-size="11" font-weight="600">EventHub</text>
+      <text x="870" y="319" text-anchor="middle" fill="#6b829e" font-size="9">Async Events / Messages</text>
+
+      <rect x="780" y="340" width="180" height="42" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.25"/>
+      <text x="870" y="360" text-anchor="middle" fill="#059669" font-size="11" font-weight="600">JWT Token Server</text>
+      <text x="870" y="373" text-anchor="middle" fill="#6b829e" font-size="9">Authentication / Credentials</text>
+
+      <!-- Bottom: Auth Flow -->
+      <rect x="20" y="460" width="960" height="140" rx="12" fill="#ffffff" stroke="#c8d6e5" stroke-width="1"/>
+      <text x="500" y="490" text-anchor="middle" fill="#5f7a9b" font-size="10" font-weight="700" letter-spacing="2">AUTHENTICATION &amp; SECURITY FLOW</text>
+      
+      <!-- Auth boxes -->
+      <rect x="50" y="510" width="170" height="45" rx="6" fill="rgba(180,83,9,0.06)" stroke="#f59e0b" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="135" y="533" text-anchor="middle" fill="#b45309" font-size="11" font-weight="600">Credentials Vault</text>
+      <text x="135" y="547" text-anchor="middle" fill="#6b829e" font-size="9">Secrets Manager / Vault</text>
+
+      <path d="M220 532 L280 532" stroke="#f59e0b" stroke-width="1"5" stroke-opacity="0.4" marker-end="url(#arrowYellow)"/>
+
+      <rect x="280" y="510" width="170" height="45" rx="6" fill="rgba(26,86,219,0.06)" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="365" y="533" text-anchor="middle" fill="#1a56db" font-size="11" font-weight="600">Client ID + Secret</text>
+      <text x="365" y="547" text-anchor="middle" fill="#6b829e" font-size="9">Per API per Environment</text>
+
+      <path d="M450 532 L520 532" stroke="#3b82f6" stroke-width="1.5" stroke-opacity="0.4" marker-end="url(#arrowBlue)"/>
+
+      <rect x="520" y="510" width="170" height="45" rx="6" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="605" y="533" text-anchor="middle" fill="#0e7c5f" font-size="11" font-weight="600">JWT Token Server</text>
+      <text x="605" y="547" text-anchor="middle" fill="#6b829e" font-size="9">Token Generation</text>
+
+      <path d="M690 532 L760 532" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.4" marker-end="url(#arrowGreen)"/>
+
+      <rect x="760" y="510" width="190" height="45" rx="6" fill="url(#purpleGrad)" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="855" y="533" text-anchor="middle" fill="#6d28d9" font-size="11" font-weight="600">Authenticated API Calls</text>
+      <text x="855" y="547" text-anchor="middle" fill="#6b829e" font-size="9">Bearer Token in Headers</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 2: THREE LAYERS ════════ -->
+<div class="page" id="layers">
+  <div class="page-label">Diagram 2 of 9</div>
+  <div class="page-title">Three-Layer Architecture</div>
+  <div class="page-subtitle">The platform's three distinct layers — each with a clear owner, responsibility, and interface boundary.</div>
+
+  <div class="diagram">
+    <div class="layers-grid">
+      <div class="layer layer--ai">
+        <div class="layer-number">3</div>
+        <div class="layer-content">
+          <div class="layer-title">AI Execution Engine</div>
+          <div class="layer-desc">Reads SKILL.md, interprets workflow, orchestrates API calls, evaluates assertions, generates business-language results. The intelligence layer that makes everything accessible to non-technical users.</div>
+          <div class="layer-items">
+            <span class="layer-chip">Claude Sonnet/Opus</span>
+            <span class="layer-chip">NL Interpretation</span>
+            <span class="layer-chip">Dynamic Orchestration</span>
+            <span class="layer-chip">Result Summarization</span>
+            <span class="layer-chip">Temporal Fallback</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="layer layer--skills">
+        <div class="layer-number">2</div>
+        <div class="layer-content">
+          <div class="layer-title">Skills Layer</div>
+          <div class="layer-desc">Self-contained test scenario definitions authored by QA engineers. Each skill packages a SKILL.md (the contract) with optional scripts. Defines inputs, workflow tasks, and assertions. Stored, versioned, and shareable.</div>
+          <div class="layer-items">
+            <span class="layer-chip">SKILL.md</span>
+            <span class="layer-chip">UICriteria</span>
+            <span class="layer-chip">WorkflowDefinition</span>
+            <span class="layer-chip">.sh / .py / .js Scripts</span>
+            <span class="layer-chip">S3 / Local Storage</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="layer layer--registry">
+        <div class="layer-number">1</div>
+        <div class="layer-content">
+          <div class="layer-title">Service Registry</div>
+          <div class="layer-desc">Platform-managed catalog of all enterprise APIs. Pre-registered with connection details, JWT authentication config, Swagger specs, and credential references. Skills reference services by name — never by URL or credential.</div>
+          <div class="layer-items">
+            <span class="layer-chip">TDI</span>
+            <span class="layer-chip">Digital Sales Services</span>
+            <span class="layer-chip">Offers API</span>
+            <span class="layer-chip">Orders API</span>
+            <span class="layer-chip">EventHub</span>
+            <span class="layer-chip">JWT Token Server</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 3: SKILL.MD ANATOMY ════════ -->
+<div class="page" id="skillmd">
+  <div class="page-label">Diagram 3 of 9</div>
+  <div class="page-title">SKILL.md Anatomy</div>
+  <div class="page-subtitle">The internal structure of a SKILL.md file — the single source of truth that bridges business intent and API execution.</div>
+
+  <div class="diagram">
+    <div class="skillmd-layout">
+      <div class="skillmd-section" style="border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.04);">
+        <div class="skillmd-section-label" style="color: #1a56db;"><span style="background: #3b82f6;"></span> METADATA (YAML Front Matter)</div>
+        <div class="skillmd-content">
+          <code>name</code> Skill name<br>
+          <code>version</code> Semantic version<br>
+          <code>author</code> Creator<br>
+          <code>tags</code> Searchable labels<br>
+          <code>execution_mode</code> <code>ai</code> or <code>workflow</code><br>
+          <code>description</code> Purpose and scope
+        </div>
+      </div>
+
+      <div class="skillmd-section" style="border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.04);">
+        <div class="skillmd-section-label" style="color: #0e7c5f;"><span style="background: #10b981;"></span> UICriteria</div>
+        <div class="skillmd-content">
+          <code>&lt;Type&gt;</code> HTML / Excel / Both<br><br>
+          <strong style="color:#6ee7b7;">HTML Mode:</strong> Field definitions with label, type (<code>select</code>, <code>multi-select</code>, <code>text</code>, <code>checkbox</code>), options, defaults, required flag<br><br>
+          <strong style="color:#6ee7b7;">Excel Mode:</strong> Expected columns, types, downloadable template
+        </div>
+      </div>
+
+      <div class="skillmd-section skillmd-full" style="border-color: rgba(139,92,246,0.3); background: rgba(109,40,217,0.04);">
+        <div class="skillmd-section-label" style="color: #6d28d9;"><span style="background: #8b5cf6;"></span> WorkflowDefinition — Tasks</div>
+        <div class="skillmd-content" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+          <div style="padding: 10px; background: rgba(109,40,217,0.05); border-radius: 6px;">
+            <strong style="color: #6d28d9;">Task 1: Create Vehicle</strong><br>
+            Service: <code>TDI</code><br>
+            Inputs: <code>{model_year}</code>, <code>{make}</code>, <code>{country}</code><br>
+            Capture: <code>account_number</code>, <code>vin</code><br>
+            Assert: values not null
+          </div>
+          <div style="padding: 10px; background: rgba(109,40,217,0.05); border-radius: 6px;">
+            <strong style="color: #6d28d9;">Task 2: Onboard</strong><br>
+            Service: <code>DSS</code><br>
+            Inputs: <code>{Task1.account_number}</code>, <code>{Task1.vin}</code><br>
+            Capture: <code>enrollment_status</code><br>
+            Assert: status = ACTIVE
+          </div>
+          <div style="padding: 10px; background: rgba(109,40,217,0.05); border-radius: 6px;">
+            <strong style="color: #6d28d9;">Task 3: Get Offers</strong><br>
+            Service: <code>OffersAPI</code><br>
+            Loop: <code>for each channel</code><br>
+            Capture: <code>offers[]</code>, <code>offer_ids[]</code><br>
+            Assert: offers not empty
+          </div>
+          <div style="padding: 10px; background: rgba(109,40,217,0.05); border-radius: 6px;">
+            <strong style="color: #6d28d9;">Task 4: Create Quote</strong><br>
+            Service: <code>OrdersAPI</code><br>
+            Loop: <code>for each offer</code><br>
+            Capture: <code>quote_id</code>, <code>tax_details</code><br>
+            Conditional asserts on tax/pricing
+          </div>
+          <div style="padding: 10px; background: rgba(109,40,217,0.05); border-radius: 6px;">
+            <strong style="color: #6d28d9;">Task 5: Create Order</strong><br>
+            Service: <code>OrdersAPI</code><br>
+            Loop: <code>for each quote</code><br>
+            Capture: <code>order_id</code>, <code>order_status</code><br>
+            Assert: status = CREATED
+          </div>
+          <div style="padding: 10px; background: rgba(109,40,217,0.05); border-radius: 6px;">
+            <strong style="color: #6d28d9;">Task 6: Verify</strong><br>
+            Service: <code>OrdersAPI</code><br>
+            Operation: <code>getOrders</code><br>
+            Assert: order count matches<br>
+            Optional: <code>EventHub</code> listen
+          </div>
+        </div>
+      </div>
+
+      <div class="skillmd-section" style="border-color: rgba(236,72,153,0.3); background: rgba(190,24,93,0.04);">
+        <div class="skillmd-section-label" style="color: #be185d;"><span style="background: #ec4899;"></span> OutputDefinition (Optional)</div>
+        <div class="skillmd-content">
+          Natural language description of desired report format: summary table, channel breakdown, tax details, pricing comparison, pass/fail per step.
+        </div>
+      </div>
+
+      <div class="skillmd-section" style="border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.04);">
+        <div class="skillmd-section-label" style="color: #b45309;"><span style="background: #f59e0b;"></span> Scripts (Optional)</div>
+        <div class="skillmd-content">
+          Supporting scripts for complex logic:<br>
+          <code>eventhub_listener.py</code> → Task 6<br>
+          <code>tax_validator.sh</code> → Task 4<br>
+          Executed in sandboxed Docker containers.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 4: EXECUTION FLOW WITH DECISION ════════ -->
+<div class="page" id="execution">
+  <div class="page-label">Diagram 4 of 9</div>
+  <div class="page-title">Execution Flow — Routing Decision</div>
+  <div class="page-subtitle">After user clicks Run, the platform reads execution_mode from the SKILL.md metadata and routes to the appropriate engine.</div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 1000 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Step 1 -->
+      <rect x="20" y="20" width="160" height="80" rx="10" fill="rgba(26,86,219,0.06)" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="100" y="48" text-anchor="middle" fill="#3b82f6" font-size="9" font-weight="700" letter-spacing="1">STEP 1</text>
+      <text x="100" y="65" text-anchor="middle" fill="#1a2744" font-size="12" font-weight="600">Select Skill</text>
+      <text x="100" y="82" text-anchor="middle" fill="#5f7a9b" font-size="9">Library or favorites</text>
+      <path d="M180 60 L220 60" stroke="#3b82f6" stroke-width="1.5" stroke-opacity="0.4" marker-end="url(#arrowBlue)"/>
+
+      <!-- Step 2 -->
+      <rect x="220" y="20" width="160" height="80" rx="10" fill="rgba(14,124,95,0.06)" stroke="#10b981" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="300" y="48" text-anchor="middle" fill="#10b981" font-size="9" font-weight="700" letter-spacing="1">STEP 2</text>
+      <text x="300" y="65" text-anchor="middle" fill="#1a2744" font-size="12" font-weight="600">Fill Criteria</text>
+      <text x="300" y="82" text-anchor="middle" fill="#5f7a9b" font-size="9">UICriteria form / Excel</text>
+      <path d="M380 60 L420 60" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.4" marker-end="url(#arrowGreen)"/>
+
+      <!-- Step 3 -->
+      <rect x="420" y="20" width="160" height="80" rx="10" fill="rgba(180,83,9,0.06)" stroke="#f59e0b" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="500" y="48" text-anchor="middle" fill="#f59e0b" font-size="9" font-weight="700" letter-spacing="1">STEP 3</text>
+      <text x="500" y="65" text-anchor="middle" fill="#1a2744" font-size="12" font-weight="600">Click Run</text>
+      <text x="500" y="82" text-anchor="middle" fill="#5f7a9b" font-size="9">Validate + gen Exec ID</text>
+      <path d="M580 60 L620 60" stroke="#f59e0b" stroke-width="1.5" stroke-opacity="0.4" marker-end="url(#arrowYellow)"/>
+
+      <!-- Step 4: Read SKILL.md -->
+      <rect x="620" y="20" width="170" height="80" rx="10" fill="rgba(15,118,110,0.06)" stroke="#14b8a6" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="705" y="48" text-anchor="middle" fill="#14b8a6" font-size="9" font-weight="700" letter-spacing="1">STEP 4</text>
+      <text x="705" y="65" text-anchor="middle" fill="#1a2744" font-size="12" font-weight="600">Load SKILL.md</text>
+      <text x="705" y="82" text-anchor="middle" fill="#5f7a9b" font-size="9">Read execution_mode</text>
+
+      <!-- Arrow down to decision diamond -->
+      <path d="M705 100 L705 130" stroke="#14b8a6" stroke-width="1.5" stroke-opacity="0.5" marker-end="url(#arrowWhite)"/>
+
+      <!-- Decision Diamond -->
+      <polygon points="705,135 780,175 705,215 630,175" fill="rgba(180,83,9,0.08)" stroke="#f59e0b" stroke-width="1.5" stroke-opacity="0.6"/>
+      <text x="705" y="172" text-anchor="middle" fill="#b45309" font-size="10" font-weight="700">execution</text>
+      <text x="705" y="184" text-anchor="middle" fill="#b45309" font-size="10" font-weight="700">_mode?</text>
+
+      <!-- LEFT PATH: AI (execution_mode: ai) -->
+      <path d="M630 175 L380 175" stroke="#8b5cf6" stroke-width="1.5" stroke-opacity="0.5" marker-end="url(#arrowPurple)"/>
+      <text x="505" y="168" text-anchor="middle" fill="#6d28d9" font-size="9" font-weight="600">execution_mode: ai</text>
+
+      <!-- AI Processing Box -->
+      <rect x="40" y="230" width="560" height="200" rx="12" fill="rgba(109,40,217,0.04)" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.25" stroke-dasharray="4,4"/>
+      <text x="320" y="255" text-anchor="middle" fill="#8b5cf6" font-size="10" font-weight="700" letter-spacing="2">PATH A — AI EXECUTION ENGINE (Claude Sonnet / Opus)</text>
+
+      <!-- AI internal steps -->
+      <rect x="60" y="272" width="120" height="48" rx="6" fill="rgba(109,40,217,0.08)" stroke="#8b5cf6" stroke-width="0.5" stroke-opacity="0.3"/>
+      <text x="120" y="293" text-anchor="middle" fill="#7c3aed" font-size="10" font-weight="600">Parse SKILL.md</text>
+      <text x="120" y="308" text-anchor="middle" fill="#5f7a9b" font-size="8">Extract all sections</text>
+      <path d="M180 296 L200 296" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.3" marker-end="url(#arrowPurple)"/>
+
+      <rect x="200" y="272" width="120" height="48" rx="6" fill="rgba(109,40,217,0.08)" stroke="#8b5cf6" stroke-width="0.5" stroke-opacity="0.3"/>
+      <text x="260" y="293" text-anchor="middle" fill="#7c3aed" font-size="10" font-weight="600">Resolve Services</text>
+      <text x="260" y="308" text-anchor="middle" fill="#5f7a9b" font-size="8">Registry lookup</text>
+      <path d="M320 296 L340 296" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.3" marker-end="url(#arrowPurple)"/>
+
+      <rect x="340" y="272" width="120" height="48" rx="6" fill="rgba(109,40,217,0.08)" stroke="#8b5cf6" stroke-width="0.5" stroke-opacity="0.3"/>
+      <text x="400" y="293" text-anchor="middle" fill="#7c3aed" font-size="10" font-weight="600">Authenticate</text>
+      <text x="400" y="308" text-anchor="middle" fill="#5f7a9b" font-size="8">JWT per service</text>
+      <path d="M460 296 L478 296" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.3" marker-end="url(#arrowPurple)"/>
+
+      <rect x="478" y="272" width="110" height="48" rx="6" fill="rgba(109,40,217,0.08)" stroke="#8b5cf6" stroke-width="0.5" stroke-opacity="0.3"/>
+      <text x="533" y="293" text-anchor="middle" fill="#7c3aed" font-size="10" font-weight="600">Execute Tasks</text>
+      <text x="533" y="308" text-anchor="middle" fill="#5f7a9b" font-size="8">Sequential + fan-out</text>
+
+      <!-- AI assertions -->
+      <rect x="130" y="335" width="340" height="40" rx="6" fill="rgba(109,40,217,0.05)" stroke="#8b5cf6" stroke-width="0.5" stroke-opacity="0.2"/>
+      <text x="300" y="356" text-anchor="middle" fill="#6d28d9" font-size="9" font-weight="600">AI interprets assertions dynamically • handles edge cases • generates summary</text>
+
+      <rect x="130" y="390" width="340" height="28" rx="4" fill="rgba(109,40,217,0.04)" stroke="#8b5cf6" stroke-width="0.5" stroke-opacity="0.15"/>
+      <text x="300" y="408" text-anchor="middle" fill="#5f7a9b" font-size="8">Flexible • Handles variations • AI tokens per run • No code deployment</text>
+
+      <!-- Arrow down from AI path -->
+      <path d="M320 430 L320 465 L500 465 L500 520" stroke="#8b5cf6" stroke-width="1.5" stroke-opacity="0.3" marker-end="url(#arrowPurple)"/>
+
+      <!-- RIGHT PATH: Temporal (execution_mode: workflow) -->
+      <path d="M780 175 L870 175 L870 230" stroke="#ec4899" stroke-width="1.5" stroke-opacity="0.5" marker-end="url(#arrowWhite)"/>
+      <text x="825" y="168" text-anchor="middle" fill="#be185d" font-size="9" font-weight="600">workflow</text>
+
+      <!-- Temporal Processing Box -->
+      <rect x="660" y="230" width="320" height="200" rx="12" fill="rgba(190,24,93,0.04)" stroke="#ec4899" stroke-width="1" stroke-opacity="0.25" stroke-dasharray="4,4"/>
+      <text x="820" y="255" text-anchor="middle" fill="#ec4899" font-size="10" font-weight="700" letter-spacing="2">PATH B — TEMPORAL WORKFLOW</text>
+
+      <!-- Temporal internal steps -->
+      <rect x="680" y="272" width="140" height="48" rx="6" fill="rgba(190,24,93,0.08)" stroke="#ec4899" stroke-width="0.5" stroke-opacity="0.3"/>
+      <text x="750" y="290" text-anchor="middle" fill="#be185d" font-size="10" font-weight="600">Dispatch Workflow</text>
+      <text x="750" y="305" text-anchor="middle" fill="#5f7a9b" font-size="8">Match SKILL.md → class</text>
+
+      <rect x="835" y="272" width="130" height="48" rx="6" fill="rgba(190,24,93,0.08)" stroke="#ec4899" stroke-width="0.5" stroke-opacity="0.3"/>
+      <text x="900" y="290" text-anchor="middle" fill="#be185d" font-size="10" font-weight="600">Run Activities</text>
+      <text x="900" y="305" text-anchor="middle" fill="#5f7a9b" font-size="8">Typed, retryable</text>
+
+      <path d="M820 296 L835 296" stroke="#ec4899" stroke-width="1" stroke-opacity="0.3"/>
+
+      <rect x="680" y="335" width="285" height="40" rx="6" fill="rgba(190,24,93,0.05)" stroke="#ec4899" stroke-width="0.5" stroke-opacity="0.2"/>
+      <text x="822" y="356" text-anchor="middle" fill="#be185d" font-size="9" font-weight="600">Deterministic replay • Auto-retry on failure • Exactly-once semantics</text>
+
+      <rect x="680" y="390" width="285" height="28" rx="4" fill="rgba(190,24,93,0.04)" stroke="#ec4899" stroke-width="0.5" stroke-opacity="0.15"/>
+      <text x="822" y="408" text-anchor="middle" fill="#5f7a9b" font-size="8">Requires dev implementation • 100% repeatable • Built-in timeout/retry</text>
+
+      <!-- Arrow down from Temporal path -->
+      <path d="M820 430 L820 465 L500 465 L500 520" stroke="#ec4899" stroke-width="1.5" stroke-opacity="0.3"/>
+
+      <!-- MERGE: Results -->
+      <rect x="300" y="520" width="200" height="45" rx="8" fill="rgba(15,118,110,0.06)" stroke="#14b8a6" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="400" y="542" text-anchor="middle" fill="#14b8a6" font-size="9" font-weight="700" letter-spacing="1">BOTH PATHS CONVERGE</text>
+      <text x="400" y="556" text-anchor="middle" fill="#5f7a9b" font-size="8">Same result schema, same UI</text>
+
+      <path d="M400 565 L400 580" stroke="#14b8a6" stroke-width="1" stroke-opacity="0.4" marker-end="url(#arrowWhite)"/>
+
+      <!-- Results row -->
+      <rect x="160" y="580" width="220" height="50" rx="8" fill="rgba(14,124,95,0.06)" stroke="#10b981" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="270" y="602" text-anchor="middle" fill="#10b981" font-size="10" font-weight="600">Results &amp; Summary</text>
+      <text x="270" y="618" text-anchor="middle" fill="#5f7a9b" font-size="8">Pass/fail per task • Error details</text>
+
+      <path d="M380 605 L420 605" stroke="#94a3b8" stroke-width="1" stroke-opacity="0.3" marker-end="url(#arrowWhite)"/>
+
+      <rect x="420" y="580" width="220" height="50" rx="8" fill="rgba(26,86,219,0.05)" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="530" y="602" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="600">Store &amp; Notify</text>
+      <text x="530" y="618" text-anchor="middle" fill="#5f7a9b" font-size="8">Persist execution • Past Executions</text>
+
+      <path d="M640 605 L680 605" stroke="#94a3b8" stroke-width="1" stroke-opacity="0.3" marker-end="url(#arrowWhite)"/>
+
+      <rect x="680" y="580" width="160" height="50" rx="8" fill="rgba(245,158,11,0.06)" stroke="#f59e0b" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="760" y="602" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="600">Export</text>
+      <text x="760" y="618" text-anchor="middle" fill="#5f7a9b" font-size="8">JSON / PDF / Excel</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 5: DUAL EXECUTION PATH ════════ -->
+<div class="page" id="dual">
+  <div class="page-label">Diagram 5 of 9</div>
+  <div class="page-title">Dual Execution Model</div>
+  <div class="page-subtitle">Same SKILL.md, two execution paths — AI-powered for flexibility, Temporal workflows for deterministic reliability.</div>
+
+  <div class="diagram">
+    <div class="dual-path">
+      <div class="path-card" style="border-color: rgba(139,92,246,0.3); background: rgba(109,40,217,0.04);">
+        <div class="path-pct" style="color: #6d28d9;">~95%</div>
+        <div class="path-title" style="color: #6d28d9;">AI-Interpreted Execution</div>
+        <div class="path-desc">The AI reads the SKILL.md at runtime, interprets the workflow dynamically, and orchestrates API calls. Default path for all skills. No developer needed after skill authoring.</div>
+        <div class="path-traits">
+          <div class="path-trait"><div class="path-trait-dot" style="background: #a78bfa;"></div> Fast to create — author SKILL.md and go</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #a78bfa;"></div> Flexible — handles variations gracefully</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #a78bfa;"></div> AI interprets natural language assertions</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #a78bfa;"></div> Cost: AI tokens per execution</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #a78bfa;"></div> Best for: ad-hoc testing, new scenarios, exploration</div>
+        </div>
+      </div>
+
+      <div class="path-divider">
+        <div class="path-divider-line"></div>
+        <div class="path-divider-or">OR</div>
+        <div class="path-divider-line"></div>
+      </div>
+
+      <div class="path-card" style="border-color: rgba(236,72,153,0.3); background: rgba(190,24,93,0.04);">
+        <div class="path-pct" style="color: #be185d;">~5%</div>
+        <div class="path-title" style="color: #be185d;">Hardened Workflow Execution</div>
+        <div class="path-desc">A developer implements the same SKILL.md as a Temporal workflow. 100% deterministic, repeatable, and reliable. Same inputs and outputs — user sees no difference.</div>
+        <div class="path-traits">
+          <div class="path-trait"><div class="path-trait-dot" style="background: #f472b6;"></div> Requires developer implementation</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #f472b6;"></div> Deterministic — same input, same execution</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #f472b6;"></div> Built-in retry, timeout, failure recovery</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #f472b6;"></div> Java / Node.js / Go / Python SDK</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #f472b6;"></div> Best for: release gates, compliance, regression</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align: center; padding: 24px 0 8px; color: var(--textDim); font-size: 13px;">
+      <strong style="color: var(--textMuted);">Lifecycle:</strong> Start with AI execution → Identify critical skills → Harden to Temporal as needed
+    </div>
+  </div>
+</div>
+
+<!-- ════════ TEMPORAL WORKFLOW DEVELOPMENT ════════ -->
+<div class="page" id="temporal-dev">
+  <div class="page-label">Reference</div>
+  <div class="page-title">Temporal Workflow Development</div>
+  <div class="page-subtitle">How hardened Temporal workflows are generated from a workflow-specific SKILL.md using Claude Opus 4.6 in IntelliJ.</div>
+
+  <div class="diagram">
+    <div class="diagram-title">DEVELOPMENT FLOW — FROM SKILL.MD TO TEMPORAL JAVA CODE</div>
+
+    <!-- The process -->
+    <div style="display: flex; gap: 0; align-items: stretch; margin-bottom: 24px;">
+      <div style="flex: 1; padding: 18px; background: rgba(26,86,219,0.05); border: 1px solid rgba(59,130,246,0.2); border-radius: 10px 0 0 10px; text-align: center;">
+        <div style="font-size: 22px; margin-bottom: 6px;">📄</div>
+        <div style="font-size: 11px; font-weight: 700; color: #1a56db; margin-bottom: 4px;">Step 1</div>
+        <div style="font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px;">Write SKILL.md</div>
+        <div style="font-size: 10px; color: var(--textDim); line-height: 1.5;">QA writes the skill with<br><code style="font-family: monospace; font-size: 10px; color: #1a56db;">execution_mode: workflow</code><br>Uses workflow template format</div>
+      </div>
+      <div style="display: flex; align-items: center; color: var(--textDim); padding: 0 4px;">→</div>
+      <div style="flex: 1; padding: 18px; background: rgba(109,40,217,0.05); border: 1px solid rgba(139,92,246,0.2); text-align: center;">
+        <div style="font-size: 22px; margin-bottom: 6px;">🧠</div>
+        <div style="font-size: 11px; font-weight: 700; color: #6d28d9; margin-bottom: 4px;">Step 2</div>
+        <div style="font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px;">Open IntelliJ IDE</div>
+        <div style="font-size: 10px; color: var(--textDim); line-height: 1.5;">Place SKILL.md in project<br>Open GitHub Copilot Chat<br>Select <strong style="color: #6d28d9;">Claude Opus 4.6</strong> model</div>
+      </div>
+      <div style="display: flex; align-items: center; color: var(--textDim); padding: 0 4px;">→</div>
+      <div style="flex: 1; padding: 18px; background: rgba(190,24,93,0.05); border: 1px solid rgba(236,72,153,0.2); text-align: center;">
+        <div style="font-size: 22px; margin-bottom: 6px;">💬</div>
+        <div style="font-size: 11px; font-weight: 700; color: #be185d; margin-bottom: 4px;">Step 3</div>
+        <div style="font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px;">Prompt Claude</div>
+        <div style="font-size: 10px; color: var(--textDim); line-height: 1.5;">"Read SKILL.md and generate<br>the Temporal Workflow +<br>Activity classes in Java"</div>
+      </div>
+      <div style="display: flex; align-items: center; color: var(--textDim); padding: 0 4px;">→</div>
+      <div style="flex: 1; padding: 18px; background: rgba(14,124,95,0.05); border: 1px solid rgba(16,185,129,0.2); text-align: center;">
+        <div style="font-size: 22px; margin-bottom: 6px;">⚙️</div>
+        <div style="font-size: 11px; font-weight: 700; color: #0e7c5f; margin-bottom: 4px;">Step 4</div>
+        <div style="font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px;">Claude Generates</div>
+        <div style="font-size: 10px; color: var(--textDim); line-height: 1.5;">Workflow interface + impl<br>Activity interface + impl<br>DTO classes, test stubs</div>
+      </div>
+      <div style="display: flex; align-items: center; color: var(--textDim); padding: 0 4px;">→</div>
+      <div style="flex: 1; padding: 18px; background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2); border-radius: 0 10px 10px 0; text-align: center;">
+        <div style="font-size: 22px; margin-bottom: 6px;">🚀</div>
+        <div style="font-size: 11px; font-weight: 700; color: #b45309; margin-bottom: 4px;">Step 5</div>
+        <div style="font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px;">Deploy &amp; Register</div>
+        <div style="font-size: 10px; color: var(--textDim); line-height: 1.5;">Review, test, deploy worker<br>Platform auto-routes when<br>skill execution_mode=workflow</div>
+      </div>
+    </div>
+
+    <!-- Generated files -->
+    <div style="padding: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 24px;">
+      <div style="font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--textMuted); margin-bottom: 10px;">FILES CLAUDE OPUS GENERATES FROM SKILL.MD</div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+        <div style="padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;">
+          <div style="font-family: monospace; font-size: 11px; color: #6d28d9; margin-bottom: 4px;">GmcOffersWorkflow.java</div>
+          <div style="font-size: 10px; color: var(--textDim);">Workflow interface — defines the entry method and signals</div>
+        </div>
+        <div style="padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;">
+          <div style="font-family: monospace; font-size: 11px; color: #6d28d9; margin-bottom: 4px;">GmcOffersWorkflowImpl.java</div>
+          <div style="font-size: 10px; color: var(--textDim);">Workflow implementation — task orchestration, fan-out loops, assertions</div>
+        </div>
+        <div style="padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;">
+          <div style="font-family: monospace; font-size: 11px; color: #0e7c5f; margin-bottom: 4px;">SalesActivities.java</div>
+          <div style="font-size: 10px; color: var(--textDim);">Activity interface — typed methods for each API call (createVehicle, onboard, getOffers, etc.)</div>
+        </div>
+        <div style="padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;">
+          <div style="font-family: monospace; font-size: 11px; color: #0e7c5f; margin-bottom: 4px;">SalesActivitiesImpl.java</div>
+          <div style="font-size: 10px; color: var(--textDim);">Activity implementation — REST calls via Service Registry, JWT auth, response mapping</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKFLOW SKILL.MD TEMPLATE -->
+  <div class="diagram">
+    <div class="diagram-title">WORKFLOW SKILL.MD TEMPLATE — DIFFERENT FROM AI SKILL.MD</div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+      <div style="padding: 16px; background: var(--surface2); border: 1px solid rgba(236,72,153,0.2); border-radius: 10px;">
+        <div style="font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #be185d; margin-bottom: 8px;">WHAT'S DIFFERENT IN WORKFLOW SKILL.MD</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-size: 12px; color: var(--textMuted); line-height: 1.5;"><code style="font-family: monospace; font-size: 11px; color: #be185d;">execution_mode: workflow</code> — tells platform to route to Temporal instead of AI</div>
+          <div style="font-size: 12px; color: var(--textMuted); line-height: 1.5;"><code style="font-family: monospace; font-size: 11px; color: #be185d;">workflow_class</code> — fully qualified Java class name of the Temporal workflow</div>
+          <div style="font-size: 12px; color: var(--textMuted); line-height: 1.5;"><code style="font-family: monospace; font-size: 11px; color: #be185d;">task_queue</code> — Temporal task queue name for worker routing</div>
+          <div style="font-size: 12px; color: var(--textMuted); line-height: 1.5;"><code style="font-family: monospace; font-size: 11px; color: #be185d;">&lt;TemporalConfig&gt;</code> — new section with retry policy, timeouts, cron schedule</div>
+          <div style="font-size: 12px; color: var(--textMuted); line-height: 1.5;"><code style="font-family: monospace; font-size: 11px; color: #be185d;">&lt;ActivityDefinitions&gt;</code> — replaces WorkflowDefinition, defines typed activities with explicit retry and timeout per activity</div>
+          <div style="font-size: 12px; color: var(--textMuted); line-height: 1.5;">UICriteria stays the same — same form for users regardless of execution path</div>
+        </div>
+      </div>
+      <div style="padding: 16px; background: var(--surface2); border: 1px solid rgba(139,92,246,0.2); border-radius: 10px;">
+        <div style="font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #6d28d9; margin-bottom: 8px;">COMPARISON</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px;">
+            <div style="padding: 6px 8px; background: rgba(109,40,217,0.06); border-radius: 4px; color: #6d28d9; font-weight: 600; text-align: center;">AI SKILL.md</div>
+            <div style="padding: 6px 8px; background: rgba(190,24,93,0.06); border-radius: 4px; color: #be185d; font-weight: 600; text-align: center;">Workflow SKILL.md</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px; color: var(--textDim);">
+            <div style="padding: 6px 8px; background: var(--surface); border-radius: 4px;">execution_mode: ai</div>
+            <div style="padding: 6px 8px; background: var(--surface); border-radius: 4px;">execution_mode: workflow</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px; color: var(--textDim);">
+            <div style="padding: 6px 8px; background: var(--surface); border-radius: 4px;">WorkflowDefinition (tasks)</div>
+            <div style="padding: 6px 8px; background: var(--surface); border-radius: 4px;">ActivityDefinitions (typed)</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px; color: var(--textDim);">
+            <div style="padding: 6px 8px; background: var(--surface); border-radius: 4px;">NL assertions ("vin not null")</div>
+            <div style="padding: 6px 8px; background: var(--surface); border-radius: 4px;">Typed assertions (field, op, value)</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px; color: var(--textDim);">
+            <div style="padding: 6px 8px; background: var(--surface); border-radius: 4px;">No retry config needed</div>
+            <div style="padding: 6px 8px; background: var(--surface); border-radius: 4px;">TemporalConfig (retry, timeout, cron)</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px; color: var(--textDim);">
+            <div style="padding: 6px 8px; background: var(--surface); border-radius: 4px;">AI interprets at runtime</div>
+            <div style="padding: 6px 8px; background: var(--surface); border-radius: 4px;">Claude generates Java code at dev time</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actual template -->
+    <div style="padding: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;">
+      <div style="font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: #be185d; margin-bottom: 10px;">WORKFLOW SKILL.MD — TEMPLATE</div>
+      <div style="padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; color: var(--textDim); line-height: 1.9; white-space: pre-wrap; overflow-x: auto;"><span style="color: #64748b;">---</span>
+<span style="color: #b45309;">name:</span> test-gmc-offers-workflow
+<span style="color: #b45309;">version:</span> 1.0
+<span style="color: #b45309;">author:</span> QA Team
+<span style="color: #b45309;">execution_mode:</span> <span style="color: #be185d;">workflow</span>
+<span style="color: #b45309;">workflow_class:</span> <span style="color: #be185d;">com.ssiuv.workflows.GmcOffersWorkflow</span>
+<span style="color: #b45309;">task_queue:</span> <span style="color: #be185d;">sales-validation-queue</span>
+<span style="color: #b45309;">tags:</span> [gmc, offers, orders, hardened]
+<span style="color: #64748b;">---</span>
+
+<span style="color: #0e7c5f;">&lt;UICriteria&gt;</span>                    <span style="color: #475569;">← Same as AI SKILL.md — identical user form</span>
+  <span style="color: #64748b;">&lt;Type&gt;</span>HTML<span style="color: #64748b;">&lt;/Type&gt;</span>
+  <span style="color: #64748b;">&lt;Fields&gt;</span>
+    { "model_year": { "type": "select", "options": ["2024","2025"], "required": true },
+      "make":       { "type": "select", "options": ["GMC","Chevrolet","Buick","Cadillac"] },
+      "channels":   { "type": "multi-select", "options": ["MC_GMOC","MC_ONECRM","MC_WEB_APP","MC_ADVSR"] } }
+  <span style="color: #64748b;">&lt;/Fields&gt;</span>
+<span style="color: #0e7c5f;">&lt;/UICriteria&gt;</span>
+
+<span style="color: #be185d;">&lt;TemporalConfig&gt;</span>                 <span style="color: #475569;">← NEW: Temporal-specific configuration</span>
+  <span style="color: #64748b;">&lt;WorkflowTimeout&gt;</span>PT30M<span style="color: #64748b;">&lt;/WorkflowTimeout&gt;</span>
+  <span style="color: #64748b;">&lt;DefaultActivityTimeout&gt;</span>PT2M<span style="color: #64748b;">&lt;/DefaultActivityTimeout&gt;</span>
+  <span style="color: #64748b;">&lt;RetryPolicy&gt;</span>
+    maxAttempts: 3
+    initialInterval: PT1S
+    backoffCoefficient: 2.0
+  <span style="color: #64748b;">&lt;/RetryPolicy&gt;</span>
+  <span style="color: #64748b;">&lt;CronSchedule&gt;</span><span style="color: #64748b;">&lt;/CronSchedule&gt;</span>           <span style="color: #475569;">← Optional: "0 6 * * MON-FRI" for daily run</span>
+<span style="color: #be185d;">&lt;/TemporalConfig&gt;</span>
+
+<span style="color: #6d28d9;">&lt;ActivityDefinitions&gt;</span>            <span style="color: #475569;">← REPLACES WorkflowDefinition — typed activities</span>
+  <span style="color: #64748b;">&lt;Activity id="1" name="createVehicle"&gt;</span>
+    service: TDI
+    method: POST /api/vehicles
+    input:  { model_year: "{model_year}", make: "{make}", country: "US" }
+    output: { account_number: "$.accountNumber", vin: "$.vin" }
+    assert: [ { field: "vin", op: "NOT_NULL" }, { field: "account_number", op: "NOT_NULL" } ]
+    timeout: PT30S
+    retries: 3
+  <span style="color: #64748b;">&lt;/Activity&gt;</span>
+
+  <span style="color: #64748b;">&lt;Activity id="2" name="onboardDSS"&gt;</span>
+    service: DSS
+    method: POST /api/enroll
+    input:  { account_number: "{1.account_number}", vin: "{1.vin}" }
+    output: { enrollment_status: "$.status" }
+    assert: [ { field: "enrollment_status", op: "EQUALS", value: "ACTIVE" } ]
+  <span style="color: #64748b;">&lt;/Activity&gt;</span>
+
+  <span style="color: #64748b;">&lt;Activity id="3" name="getOffers" <span style="color: #be185d;">loop="for each channel in {channels}"</span>&gt;</span>
+    service: OffersAPI
+    method: GET /api/offers
+    input:  { vin: "{1.vin}", account_number: "{1.account_number}", channel: "{channel}" }
+    output: { offers: "$.offers", offer_ids: "$.offers[*].id" }
+    assert: [ { field: "offers", op: "NOT_EMPTY" } ]
+  <span style="color: #64748b;">&lt;/Activity&gt;</span>
+
+  <span style="color: #64748b;">&lt;Activity id="4" name="createQuote" <span style="color: #be185d;">loop="for each offer in {3.offer_ids}"</span>&gt;</span>
+    service: OrdersAPI
+    method: POST /api/quotes
+    input:  { offer_id: "{offer}", vin: "{1.vin}" }
+    output: { quote_id: "$.quoteId", total: "$.total", tax: "$.taxAmount" }
+    assert: [ { field: "quote_id", op: "NOT_NULL" }, { field: "total", op: "GREATER_THAN", value: "0" } ]
+  <span style="color: #64748b;">&lt;/Activity&gt;</span>
+
+  <span style="color: #64748b;">&lt;Activity id="5" name="createOrder" <span style="color: #be185d;">loop="for each quote in {4.quote_id}"</span>&gt;</span>
+    service: OrdersAPI
+    method: POST /api/orders
+    input:  { quote_id: "{quote}" }
+    output: { order_id: "$.orderId", status: "$.status" }
+    assert: [ { field: "status", op: "IN", value: ["CREATED","CONFIRMED"] } ]
+  <span style="color: #64748b;">&lt;/Activity&gt;</span>
+
+  <span style="color: #64748b;">&lt;Activity id="6" name="verifyOrders"&gt;</span>
+    service: OrdersAPI
+    method: GET /api/orders?accountNumber={1.account_number}
+    output: { order_count: "$.totalCount" }
+    assert: [ { field: "order_count", op: "EQUALS", value: "{5.order_id.length}" } ]
+  <span style="color: #64748b;">&lt;/Activity&gt;</span>
+<span style="color: #6d28d9;">&lt;/ActivityDefinitions&gt;</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ SALES MCP SERVERS ════════ -->
+<div class="page" id="sales-mcp">
+  <div class="page-label">Reference</div>
+  <div class="page-title">Sales MCP Servers</div>
+  <div class="page-subtitle">Extending existing Spring Boot microservices as Model Context Protocol (MCP) servers using Spring AI, and how this connects to SSIUV.</div>
+
+  <div class="diagram">
+    <div class="diagram-title">WHAT ARE MCP SERVERS AND WHY THEY MATTER HERE</div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+      <div style="padding: 20px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;">
+        <div style="font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 10px;">WHAT IS MCP?</div>
+        <div style="font-size: 13px; color: var(--textMuted); line-height: 1.7;">
+          Model Context Protocol (MCP) is an open standard that lets AI models directly discover and call tools exposed by servers. Instead of the AI needing a Swagger spec and custom HTTP code to call an API, an MCP server advertises its capabilities as typed tools. The AI model sees them natively and can invoke them directly.
+          <br><br>
+          Spring AI provides <code style="font-family: monospace; font-size: 11px; color: #1a56db;">spring-ai-mcp-server</code> — an annotation-driven way to expose any existing Spring Boot service as an MCP server. Add <code style="font-family: monospace; font-size: 11px; color: #1a56db;">@Tool</code> annotations to your service methods and your existing REST API becomes AI-callable.
+        </div>
+      </div>
+      <div style="padding: 20px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;">
+        <div style="font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--success); margin-bottom: 10px;">HOW THIS HELPS SKILLFORGE</div>
+        <div style="font-size: 13px; color: var(--textMuted); line-height: 1.7;">
+          Today, the AI Execution Engine calls APIs via REST using the Service Registry (URL + JWT + Swagger). This works, but the AI must interpret Swagger specs and construct HTTP requests.
+          <br><br>
+          With MCP servers, the AI sees typed tools directly: <code style="font-family: monospace; font-size: 11px; color: #0e7c5f;">createVehicle(make, model, year)</code> instead of parsing <code style="font-family: monospace; font-size: 11px; color: #64748b;">POST /api/v1/vehicles</code> with a JSON body. This means fewer AI interpretation errors, faster execution, and the AI can discover available operations without needing Swagger specs in the registry.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Existing Services → MCP -->
+  <div class="diagram">
+    <div class="diagram-title">EXISTING SPRING BOOT MICROSERVICES → SPRING AI MCP SERVERS</div>
+
+    <div style="display: grid; grid-template-columns: 340px 60px 1fr; gap: 0; align-items: start; margin-bottom: 24px;">
+      <!-- Left: Existing services -->
+      <div>
+        <div style="font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--textDim); margin-bottom: 10px;">EXISTING SPRING BOOT SERVICES</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 12px; font-weight: 600; color: var(--text);">sales-catalog-retail</div>
+              <div style="font-size: 10px; color: var(--textDim);">Vehicle catalog, trim, packages, pricing</div>
+            </div>
+            <div style="font-size: 9px; padding: 2px 8px; background: rgba(26,86,219,0.08); color: #1a56db; border-radius: 3px;">Spring Boot</div>
+          </div>
+          <div style="padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 12px; font-weight: 600; color: var(--text);">sales-product-autoassign</div>
+              <div style="font-size: 10px; color: var(--textDim);">Product assignment rules engine</div>
+            </div>
+            <div style="font-size: 9px; padding: 2px 8px; background: rgba(26,86,219,0.08); color: #1a56db; border-radius: 3px;">Spring Boot</div>
+          </div>
+          <div style="padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 12px; font-weight: 600; color: var(--text);">sales-offer-retail</div>
+              <div style="font-size: 10px; color: var(--textDim);">Offer qualification, pricing, channels</div>
+            </div>
+            <div style="font-size: 9px; padding: 2px 8px; background: rgba(26,86,219,0.08); color: #1a56db; border-radius: 3px;">Spring Boot</div>
+          </div>
+          <div style="padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 12px; font-weight: 600; color: var(--text);">sales-order</div>
+              <div style="font-size: 10px; color: var(--textDim);">Quotes, orders, checkout</div>
+            </div>
+            <div style="font-size: 9px; padding: 2px 8px; background: rgba(26,86,219,0.08); color: #1a56db; border-radius: 3px;">Spring Boot</div>
+          </div>
+          <div style="padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 12px; font-weight: 600; color: var(--text);">sales-order-fulfillment</div>
+              <div style="font-size: 10px; color: var(--textDim);">Order fulfillment, provisioning</div>
+            </div>
+            <div style="font-size: 9px; padding: 2px 8px; background: rgba(26,86,219,0.08); color: #1a56db; border-radius: 3px;">Spring Boot</div>
+          </div>
+          <div style="padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 12px; font-weight: 600; color: var(--text);">sales-order-acl</div>
+              <div style="font-size: 10px; color: var(--textDim);">Anti-corruption layer, legacy integration</div>
+            </div>
+            <div style="font-size: 9px; padding: 2px 8px; background: rgba(26,86,219,0.08); color: #1a56db; border-radius: 3px;">Spring Boot</div>
+          </div>
+          <div style="padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 12px; font-weight: 600; color: var(--text);">TDI</div>
+              <div style="font-size: 10px; color: var(--textDim);">Test data initialization — vehicles, accounts</div>
+            </div>
+            <div style="font-size: 9px; padding: 2px 8px; background: rgba(26,86,219,0.08); color: #1a56db; border-radius: 3px;">API</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow column -->
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding-top: 30px;">
+        <div style="font-size: 10px; color: var(--textDim); writing-mode: vertical-lr; letter-spacing: 1px; margin-bottom: 8px;">+ Spring AI</div>
+        <div style="font-size: 20px; color: var(--success);">→</div>
+      </div>
+
+      <!-- Right: MCP Server view -->
+      <div>
+        <div style="font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--success); margin-bottom: 10px;">AS MCP SERVERS — TOOLS EXPOSED TO AI</div>
+        <div style="padding: 16px; background: rgba(16,185,129,0.04); border: 1px solid rgba(16,185,129,0.2); border-radius: 10px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            
+            <div style="padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;">
+              <div style="font-size: 11px; font-weight: 600; color: #0e7c5f; margin-bottom: 4px;">sales-catalog-retail MCP</div>
+              <div style="font-family: monospace; font-size: 10px; color: var(--textDim); line-height: 1.7;">
+                <span style="color: #059669;">@Tool</span> getProducts(country, locale, includeFeatures, includeProductsWithCategories) → List&lt;Product&gt;<br>
+                <span style="font-size: 9px; color: var(--textDim);">country: US | CA | MX &nbsp; locale: en_US | es_MX | fr_CA</span>
+              </div>
+            </div>
+
+            <div style="padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;">
+              <div style="font-size: 11px; font-weight: 600; color: #0e7c5f; margin-bottom: 4px;">sales-product-autoassign MCP</div>
+              <div style="font-family: monospace; font-size: 10px; color: var(--textDim); line-height: 1.7;">
+                <span style="color: #059669;">@Tool</span> getAutoAssignRules(productId, country) → List&lt;AssignRule&gt;<br>
+                <span style="color: #059669;">@Tool</span> evaluateAssignment(vin, productId) → AssignmentResult
+              </div>
+            </div>
+
+            <div style="padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;">
+              <div style="font-size: 11px; font-weight: 600; color: #0e7c5f; margin-bottom: 4px;">sales-offer-retail MCP</div>
+              <div style="font-family: monospace; font-size: 10px; color: var(--textDim); line-height: 1.7;">
+                <span style="color: #059669;">@Tool</span> getOffers(account, vin, channel, salesSegment) → List&lt;Offer&gt;<br>
+                <span style="font-size: 9px; color: var(--textDim);">channel: MC_GMOC | MC_ADVSR | MC_ONECRM | MC_BATCH | MC_OLE | MC_REWARDS | MC_GUARDIAN</span><br>
+                <span style="font-size: 9px; color: var(--textDim);">salesSegment: FIRST_PURCHASE | SALES</span>
+              </div>
+            </div>
+
+            <div style="padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;">
+              <div style="font-size: 11px; font-weight: 600; color: #0e7c5f; margin-bottom: 4px;">sales-order MCP</div>
+              <div style="font-family: monospace; font-size: 10px; color: var(--textDim); line-height: 1.7;">
+                <span style="color: #059669;">@Tool</span> getOrders(vin, account, channel, country) → List&lt;Order&gt;<br>
+                <span style="color: #059669;">@Tool</span> createQuote(offerId, vin, accountNumber) → Quote<br>
+                <span style="color: #059669;">@Tool</span> createOrder(quoteId) → Order<br>
+                <span style="font-size: 9px; color: var(--textDim);">country: US | CA | MX</span>
+              </div>
+            </div>
+
+            <div style="padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;">
+              <div style="font-size: 11px; font-weight: 600; color: #0e7c5f; margin-bottom: 4px;">sales-order-fulfillment MCP</div>
+              <div style="font-family: monospace; font-size: 10px; color: var(--textDim); line-height: 1.7;">
+                <span style="color: #059669;">@Tool</span> getFulfillmentStatus(orderId) → FulfillmentStatus<br>
+                <span style="color: #059669;">@Tool</span> triggerProvisioning(orderId) → ProvisioningResult
+              </div>
+            </div>
+
+            <div style="padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;">
+              <div style="font-size: 11px; font-weight: 600; color: #0e7c5f; margin-bottom: 4px;">sales-order-acl MCP</div>
+              <div style="font-family: monospace; font-size: 10px; color: var(--textDim); line-height: 1.7;">
+                <span style="color: #059669;">@Tool</span> translateLegacyOrder(legacyOrderId) → Order<br>
+                <span style="color: #059669;">@Tool</span> syncOrderStatus(orderId, targetSystem) → SyncResult
+              </div>
+            </div>
+
+            <div style="padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;">
+              <div style="font-size: 11px; font-weight: 600; color: #0e7c5f; margin-bottom: 4px;">TDI MCP</div>
+              <div style="font-family: monospace; font-size: 10px; color: var(--textDim); line-height: 1.7;">
+                <span style="color: #059669;">@Tool</span> createVehicle(year, make, model, country) → VehicleRecord<br>
+                <span style="color: #059669;">@Tool</span> createCustomerAccount(vehicleId) → Account<br>
+                <span style="font-size: 9px; color: var(--textDim);">country: US | CA | MX</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Architecture Impact -->
+  <div class="diagram">
+    <div class="diagram-title">HOW MCP CHANGES THE SKILLFORGE ARCHITECTURE</div>
+
+    <div style="display: grid; grid-template-columns: 1fr 60px 1fr; gap: 0; align-items: start;">
+      <!-- Before -->
+      <div style="padding: 20px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;">
+        <div style="font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--textDim); margin-bottom: 12px;">BEFORE — REST + SERVICE REGISTRY</div>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--textMuted); line-height: 1.6;">
+          <div style="padding: 8px 10px; background: var(--surface); border-radius: 6px;">AI reads Swagger spec from Service Registry</div>
+          <div style="padding: 8px 10px; background: var(--surface); border-radius: 6px;">AI constructs HTTP request body from SKILL.md input mappings</div>
+          <div style="padding: 8px 10px; background: var(--surface); border-radius: 6px;">AI manually extracts fields from JSON response using JSONPath</div>
+          <div style="padding: 8px 10px; background: var(--surface); border-radius: 6px;">AI manages JWT auth token lifecycle</div>
+          <div style="padding: 8px 10px; background: var(--surface); border-radius: 6px;">Swagger specs must be uploaded and kept in sync</div>
+          <div style="padding: 8px 10px; background: var(--surface); border-radius: 6px; border-left: 3px solid var(--warn);">Failure mode: AI misinterprets request format, wrong field mapping</div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 80px;">
+        <div style="font-size: 24px; color: var(--success);">→</div>
+      </div>
+
+      <!-- After -->
+      <div style="padding: 20px; background: rgba(16,185,129,0.04); border: 1px solid rgba(16,185,129,0.2); border-radius: 10px;">
+        <div style="font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--success); margin-bottom: 12px;">AFTER — MCP SERVERS</div>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--textMuted); line-height: 1.6;">
+          <div style="padding: 8px 10px; background: var(--surface); border-radius: 6px;">AI sees typed tools: <code style="font-family: monospace; font-size: 10px; color: #0e7c5f;">createQuote(offerId, vin)</code></div>
+          <div style="padding: 8px 10px; background: var(--surface); border-radius: 6px;">Parameters are typed — no body construction needed</div>
+          <div style="padding: 8px 10px; background: var(--surface); border-radius: 6px;">Return types are typed — no JSONPath extraction</div>
+          <div style="padding: 8px 10px; background: var(--surface); border-radius: 6px;">Auth handled by MCP server internally (Spring Security)</div>
+          <div style="padding: 8px 10px; background: var(--surface); border-radius: 6px;">Tool schema auto-generated from Java code — always in sync</div>
+          <div style="padding: 8px 10px; background: var(--surface); border-radius: 6px; border-left: 3px solid var(--success);">Fewer AI errors: typed invocation = no format guessing</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Code example -->
+    <div style="margin-top: 20px; padding: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;">
+      <div style="font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 10px;">ADDING MCP TO AN EXISTING SPRING BOOT SERVICE — WHAT IT TAKES</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--textMuted); margin-bottom: 6px;">1. Add dependency (pom.xml)</div>
+          <div style="padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-family: monospace; font-size: 10px; color: var(--textDim); line-height: 1.8; white-space: pre-wrap;"><span style="color: #1a56db;">&lt;dependency&gt;</span>
+  &lt;groupId&gt;<span style="color: #0e7c5f;">org.springframework.ai</span>&lt;/groupId&gt;
+  &lt;artifactId&gt;<span style="color: #0e7c5f;">spring-ai-mcp-server-spring-boot-starter</span>&lt;/artifactId&gt;
+<span style="color: #1a56db;">&lt;/dependency&gt;</span></div>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--textMuted); margin-bottom: 6px;">2. Annotate existing service methods</div>
+          <div style="padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-family: monospace; font-size: 10px; color: var(--textDim); line-height: 1.8; white-space: pre-wrap;"><span style="color: #6d28d9;">@Service</span>
+public class OfferService {
+
+  <span style="color: #059669;">@Tool</span>(<span style="color: #b45309;">"Qualify offers for a VIN and channel"</span>)
+  public List&lt;Offer&gt; qualifyOffers(
+      String vin, String accountNumber,
+      String channel) {
+    <span style="color: #475569;">// existing business logic — no changes</span>
+    return offerRepository.qualify(vin, channel);
+  }
+}</div>
+        </div>
+      </div>
+      <div style="margin-top: 12px; padding: 10px 14px; background: rgba(14,124,95,0.05); border: 1px solid rgba(14,124,95,0.1); border-radius: 6px; font-size: 11px; color: var(--textMuted); line-height: 1.6;">
+        No changes to existing business logic. No new REST endpoints. The <code style="font-family: monospace; font-size: 10px; color: #0e7c5f;">@Tool</code> annotation exposes the method as an MCP tool. Spring AI auto-generates the tool schema from the method signature, parameter names, and the description string. The existing REST API continues to work alongside MCP.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 6: DATA PIPELINE ════════ -->
+<div class="page" id="pipeline">
+  <div class="page-label">Diagram 6 of 9</div>
+  <div class="page-title">Test Execution Pipeline</div>
+  <div class="page-subtitle">The actual data flow through your digital sales services during a typical end-to-end skill execution.</div>
+
+  <div class="diagram">
+    <div class="pipeline">
+      <div class="pipe-node">
+        <div class="pipe-icon" style="background: rgba(26,86,219,0.08); border-color: rgba(59,130,246,0.4); color: #1a56db;">🚗</div>
+        <div class="pipe-label" style="color: #1a56db;">TDI</div>
+        <div class="pipe-sub">Create vehicle<br>& customer<br><br><strong style="color:#93c5fd;">Output:</strong><br>account_number<br>vin</div>
+      </div>
+      <div class="pipe-connector"><svg viewBox="0 0 40 20"><path d="M0 10 L32 10" stroke="#8ba3be" stroke-width="1.5"/><path d="M28 5 L36 10 L28 15" fill="#6b829e"/></svg></div>
+
+      <div class="pipe-node">
+        <div class="pipe-icon" style="background: rgba(14,124,95,0.08); border-color: rgba(16,185,129,0.4); color: #0e7c5f;">📋</div>
+        <div class="pipe-label" style="color: #0e7c5f;">DSS</div>
+        <div class="pipe-sub">Onboard &<br>qualify<br><br><strong style="color:#6ee7b7;">Output:</strong><br>enrollment_status<br>trial_offers</div>
+      </div>
+      <div class="pipe-connector"><svg viewBox="0 0 40 20"><path d="M0 10 L32 10" stroke="#8ba3be" stroke-width="1.5"/><path d="M28 5 L36 10 L28 15" fill="#6b829e"/></svg></div>
+
+      <div class="pipe-node">
+        <div class="pipe-icon" style="background: rgba(109,40,217,0.08); border-color: rgba(139,92,246,0.4); color: #6d28d9;">🎯</div>
+        <div class="pipe-label" style="color: #6d28d9;">Offers API</div>
+        <div class="pipe-sub">Get offers<br><em style="color:#c4b5fd;">per channel</em><br><br><strong style="color:#c4b5fd;">Fan-out:</strong><br>MC_GMOC<br>MC_ONECRM<br>MC_WEB_APP<br>MC_ADVSR</div>
+      </div>
+      <div class="pipe-connector"><svg viewBox="0 0 40 20"><path d="M0 10 L32 10" stroke="#8ba3be" stroke-width="1.5"/><path d="M28 5 L36 10 L28 15" fill="#6b829e"/></svg></div>
+
+      <div class="pipe-node">
+        <div class="pipe-icon" style="background: rgba(180,83,9,0.08); border-color: rgba(245,158,11,0.4); color: #b45309;">💰</div>
+        <div class="pipe-label" style="color: #b45309;">Quote</div>
+        <div class="pipe-sub">Create quote<br><em style="color:#fcd34d;">per offer</em><br><br><strong style="color:#fcd34d;">Output:</strong><br>quote_id<br>total + tax</div>
+      </div>
+      <div class="pipe-connector"><svg viewBox="0 0 40 20"><path d="M0 10 L32 10" stroke="#8ba3be" stroke-width="1.5"/><path d="M28 5 L36 10 L28 15" fill="#6b829e"/></svg></div>
+
+      <div class="pipe-node">
+        <div class="pipe-icon" style="background: rgba(190,24,93,0.08); border-color: rgba(236,72,153,0.4); color: #be185d;">📦</div>
+        <div class="pipe-label" style="color: #be185d;">Order</div>
+        <div class="pipe-sub">Create order<br><em style="color:#fda4af;">per quote</em><br><br><strong style="color:#fda4af;">Output:</strong><br>order_id<br>order_status</div>
+      </div>
+      <div class="pipe-connector"><svg viewBox="0 0 40 20"><path d="M0 10 L32 10" stroke="#8ba3be" stroke-width="1.5"/><path d="M28 5 L36 10 L28 15" fill="#6b829e"/></svg></div>
+
+      <div class="pipe-node">
+        <div class="pipe-icon" style="background: rgba(15,118,110,0.08); border-color: rgba(20,184,166,0.4); color: #0f766e;">✅</div>
+        <div class="pipe-label" style="color: #0f766e;">Verify</div>
+        <div class="pipe-sub">getOrders +<br>EventHub<br><br><strong style="color:#5eead4;">Assert:</strong><br>all orders exist<br>status correct</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 16px; padding: 16px; background: var(--surface2); border-radius: 8px; border: 1px dashed var(--border);">
+      <div style="font-size: 11px; color: var(--textDim); margin-bottom: 8px; font-weight: 600; letter-spacing: 0.5px;">DATA THREADING</div>
+      <div style="font-size: 12px; color: var(--textMuted); line-height: 1.8; font-family: 'SF Mono', 'Fira Code', monospace;">
+        TDI → <span style="color: #1a56db;">account_number, vin</span> → DSS → Offers(×4 channels) → <span style="color: #6d28d9;">offers[]</span> → Quote(×N offers) → <span style="color: #b45309;">quote_ids[]</span> → Order(×N quotes) → <span style="color: #be185d;">order_ids[]</span> → Verify
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 7: USER JOURNEYS ════════ -->
+<div class="page" id="users">
+  <div class="page-label">Diagram 7 of 9</div>
+  <div class="page-title">User Journeys</div>
+  <div class="page-subtitle">How each persona interacts with the platform — from skill creation to execution to administration.</div>
+
+  <div class="diagram">
+    <div class="journey-grid">
+      <div class="persona-card persona-card--author">
+        <div class="persona-icon">🛠️</div>
+        <div class="persona-title" style="color: #1a56db;">Skill Author</div>
+        <div class="persona-role">QA Engineer / Technical Lead</div>
+        <div class="persona-steps">
+          <div class="persona-step"><div class="step-num">1</div>Identify a business scenario that needs repeatable testing</div>
+          <div class="persona-step"><div class="step-num">2</div>Author SKILL.md with metadata, UICriteria, WorkflowDefinition</div>
+          <div class="persona-step"><div class="step-num">3</div>Optionally add .sh/.py/.js scripts for complex logic</div>
+          <div class="persona-step"><div class="step-num">4</div>Package as zip and upload via Skills → Definition</div>
+          <div class="persona-step"><div class="step-num">5</div>Review validation results and publish</div>
+          <div class="persona-step"><div class="step-num">6</div>Test-run the skill to verify it works</div>
+          <div class="persona-step"><div class="step-num">7</div>Iterate and version as APIs or scenarios evolve</div>
+        </div>
+      </div>
+
+      <div class="persona-card persona-card--executor">
+        <div class="persona-icon">▶️</div>
+        <div class="persona-title" style="color: #0e7c5f;">Skill Executor</div>
+        <div class="persona-role">Business User / QA Analyst</div>
+        <div class="persona-steps">
+          <div class="persona-step"><div class="step-num">1</div>Open Skills → Execution (or Favorites for daily runs)</div>
+          <div class="persona-step"><div class="step-num">2</div>Search and select a skill from the dropdown</div>
+          <div class="persona-step"><div class="step-num">3</div>Fill in dynamic criteria form (or upload Excel for batch)</div>
+          <div class="persona-step"><div class="step-num">4</div>Select target environment and click Run</div>
+          <div class="persona-step"><div class="step-num">5</div>Watch real-time progress or navigate away</div>
+          <div class="persona-step"><div class="step-num">6</div>Read AI-generated business summary of results</div>
+          <div class="persona-step"><div class="step-num">7</div>Drill into failures, export report, or re-run</div>
+        </div>
+      </div>
+
+      <div class="persona-card persona-card--admin">
+        <div class="persona-icon">⚙️</div>
+        <div class="persona-title" style="color: #b45309;">Platform Admin</div>
+        <div class="persona-role">Engineering / DevOps</div>
+        <div class="persona-steps">
+          <div class="persona-step"><div class="step-num">1</div>Register enterprise APIs in the Service Registry</div>
+          <div class="persona-step"><div class="step-num">2</div>Configure JWT token server URL per service</div>
+          <div class="persona-step"><div class="step-num">3</div>Store Client ID / Secret securely (per environment)</div>
+          <div class="persona-step"><div class="step-num">4</div>Upload Swagger/OpenAPI specs for each service</div>
+          <div class="persona-step"><div class="step-num">5</div>Test connectivity / health checks</div>
+          <div class="persona-step"><div class="step-num">6</div>Rotate credentials without impacting skills</div>
+          <div class="persona-step"><div class="step-num">7</div>Monitor execution metrics and platform health</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 8: SYSTEM COMPONENTS ════════ -->
+<div class="page" id="components">
+  <div class="page-label">Diagram 8 of 9</div>
+  <div class="page-title">System Components</div>
+  <div class="page-subtitle">Technical stack and component breakdown organized by functional area.</div>
+
+  <div class="diagram">
+    <div class="components-grid">
+      <div class="comp-group" style="border-color: rgba(59,130,246,0.2); background: rgba(59,130,246,0.03);">
+        <div class="comp-group-label" style="background: rgba(26,86,219,0.1); color: #1a56db;">FRONTEND</div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #1a56db;">React SPA</div>
+          <div class="comp-tech">TypeScript + Tailwind CSS</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #1a56db;">Dynamic Form Engine</div>
+          <div class="comp-tech">JSON Schema → React Components</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #1a56db;">SSE Client</div>
+          <div class="comp-tech">Real-time execution progress</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #1a56db;">State Management</div>
+          <div class="comp-tech">Zustand / React Query</div>
+        </div>
+      </div>
+
+      <div class="comp-group" style="border-color: rgba(16,185,129,0.2); background: rgba(16,185,129,0.03);">
+        <div class="comp-group-label" style="background: rgba(14,124,95,0.1); color: #0e7c5f;">BACKEND</div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #0e7c5f;">REST API Server</div>
+          <div class="comp-tech">Java Spring Boot</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #0e7c5f;">Skills Manager</div>
+          <div class="comp-tech">Upload, parse, validate, version</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #0e7c5f;">Execution Manager</div>
+          <div class="comp-tech">Job queue, state, progress</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #0e7c5f;">Auth Service</div>
+          <div class="comp-tech">JWT management, OAuth2</div>
+        </div>
+      </div>
+
+      <div class="comp-group" style="border-color: rgba(139,92,246,0.2); background: rgba(139,92,246,0.03);">
+        <div class="comp-group-label" style="background: rgba(139,92,246,0.15); color: #6d28d9;">EXECUTION ENGINES</div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #6d28d9;">Claude AI Engine</div>
+          <div class="comp-tech">Anthropic API (Sonnet/Opus)</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #6d28d9;">SKILL.md Parser</div>
+          <div class="comp-tech">Metadata + XML section extraction</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #6d28d9;">Temporal Workers</div>
+          <div class="comp-tech">Java/Go/Python/TS SDK</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #6d28d9;">Script Sandbox</div>
+          <div class="comp-tech">Docker containers</div>
+        </div>
+      </div>
+
+      <div class="comp-group" style="border-color: rgba(245,158,11,0.2); background: rgba(245,158,11,0.03);">
+        <div class="comp-group-label" style="background: rgba(245,158,11,0.15); color: #b45309;">DATA & INFRASTRUCTURE</div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #b45309;">PostgreSQL</div>
+          <div class="comp-tech">Skills, executions, users, registry</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #b45309;">AWS S3</div>
+          <div class="comp-tech">Skill packages, results, exports</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #b45309;">Secrets Manager</div>
+          <div class="comp-tech">API credentials vault</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #b45309;">Kafka / SQS</div>
+          <div class="comp-tech">Async execution job queue</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 9: UI LAYOUT ════════ -->
+<div class="page" id="screens">
+  <div class="page-label">Diagram 9 of 9</div>
+  <div class="page-title">UI Layout — Skills Execution View</div>
+  <div class="page-subtitle">Mockup of the primary user screen showing left navigation, skill selection, dynamic criteria, and execution.</div>
+
+  <div class="diagram">
+    <div class="screen-mockup">
+      <div class="screen-topbar">
+        <div class="screen-dot" style="background: #ef4444;"></div>
+        <div class="screen-dot" style="background: #f59e0b;"></div>
+        <div class="screen-dot" style="background: #10b981;"></div>
+        <span style="flex:1; text-align:center; font-size: 12px; color: var(--textDim); font-weight: 600;">SSIUV — Skills Execution</span>
+        <span style="font-size: 11px; color: var(--textDim); padding: 3px 10px; background: rgba(14,124,95,0.08); border-radius: 4px; color: #0e7c5f;">ENV: Staging</span>
+      </div>
+      <div class="screen-body">
+        <div class="screen-sidebar">
+          <div style="font-size: 14px; font-weight: 700; color: var(--accent); padding: 4px 12px 12px; letter-spacing: -0.3px;">⚡ SSIUV</div>
+          <div class="sidebar-item">📊 Dashboard</div>
+          <div class="sidebar-divider"></div>
+          <div class="sidebar-label">Skills</div>
+          <div class="sidebar-item sidebar-item--sub">📁 Definition</div>
+          <div class="sidebar-item sidebar-item--sub sidebar-item--active">▶️ Execution</div>
+          <div class="sidebar-item sidebar-item--sub">⭐ Favorites</div>
+          <div class="sidebar-item sidebar-item--sub">📜 Past Executions</div>
+          <div class="sidebar-divider"></div>
+          <div class="sidebar-label">Admin</div>
+          <div class="sidebar-item sidebar-item--sub">🔌 Service Registry</div>
+          <div class="sidebar-item sidebar-item--sub">👥 Users</div>
+        </div>
+        <div class="screen-main">
+          <div class="screen-main-title">Execute Skill</div>
+          
+          <div class="mock-card">
+            <div class="mock-card-title" style="color: var(--textMuted);">Select Skill</div>
+            <div class="mock-field" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>⭐ Test US 2025 GMC Offers and Orders (v1.2)</span>
+              <span style="font-size: 10px;">▼</span>
+            </div>
+          </div>
+
+          <div class="mock-card">
+            <div class="mock-card-title" style="color: var(--textMuted);">Input Criteria</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+              <div>
+                <div style="font-size: 10px; color: var(--textDim); margin-bottom: 4px;">Model Year *</div>
+                <div class="mock-field">2025</div>
+              </div>
+              <div>
+                <div style="font-size: 10px; color: var(--textDim); margin-bottom: 4px;">Make *</div>
+                <div class="mock-field">GMC</div>
+              </div>
+              <div>
+                <div style="font-size: 10px; color: var(--textDim); margin-bottom: 4px;">Model *</div>
+                <div class="mock-field">Sierra</div>
+              </div>
+              <div>
+                <div style="font-size: 10px; color: var(--textDim); margin-bottom: 4px;">Country *</div>
+                <div class="mock-field">US</div>
+              </div>
+              <div style="grid-column: span 2;">
+                <div style="font-size: 10px; color: var(--textDim); margin-bottom: 4px;">Sales Channels *</div>
+                <div class="mock-field">
+                  <span style="background: var(--accentGlow); color: var(--accent); padding: 2px 8px; border-radius: 3px; font-size: 10px; margin-right: 4px;">MC_GMOC</span>
+                  <span style="background: var(--accentGlow); color: var(--accent); padding: 2px 8px; border-radius: 3px; font-size: 10px; margin-right: 4px;">MC_WEB_APP</span>
+                  <span style="background: var(--accentGlow); color: var(--accent); padding: 2px 8px; border-radius: 3px; font-size: 10px;">MC_ADVSR</span>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 16px; margin-top: 8px;">
+              <label style="font-size: 11px; color: var(--textMuted); display: flex; align-items: center; gap: 4px;">
+                <span style="width: 14px; height: 14px; border: 1px solid var(--border); border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; background: var(--accentGlow); color: var(--accent); font-size: 10px;">✓</span>
+                Validate Tax
+              </label>
+              <label style="font-size: 11px; color: var(--textMuted); display: flex; align-items: center; gap: 4px;">
+                <span style="width: 14px; height: 14px; border: 1px solid var(--border); border-radius: 3px; display: inline-block;"></span>
+                Validate Pricing
+              </label>
+            </div>
+            <div class="mock-btn">▶ Run Skill</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+</style>
+</body>
+</html>

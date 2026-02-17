@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillForge — Product Architecture & Design</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --bg: #0a0d14;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --surface3: #1e293b;
+    --border: #1e2d45;
+    --text: #e2e8f0;
+    --textMuted: #94a3b8;
+    --textDim: #64748b;
+    --accent: #3b82f6;
+    --accentLight: #60a5fa;
+    --accentGlow: rgba(59,130,246,0.12);
+    --accentGlow2: rgba(59,130,246,0.06);
+    --success: #10b981;
+    --successGlow: rgba(16,185,129,0.12);
+    --warn: #f59e0b;
+    --warnGlow: rgba(245,158,11,0.12);
+    --purple: #8b5cf6;
+    --purpleGlow: rgba(139,92,246,0.12);
+    --red: #ef4444;
+    --redGlow: rgba(239,68,68,0.12);
+    --teal: #14b8a6;
+    --tealGlow: rgba(20,184,166,0.12);
+    --pink: #ec4899;
+    --pinkGlow: rgba(236,72,153,0.12);
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 32px;
+    min-height: 100vh;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .page-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .page-title {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 6px;
+    letter-spacing: -0.5px;
+  }
+
+  .page-subtitle {
+    font-size: 15px;
+    color: var(--textDim);
+    margin-bottom: 40px;
+    max-width: 700px;
+  }
+
+  /* ── Diagram Container ── */
+  .diagram {
+    position: relative;
+    width: 100%;
+    padding: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    margin-bottom: 32px;
+    overflow: hidden;
+  }
+
+  .diagram::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.4;
+  }
+
+  .diagram-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--textMuted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  /* ── SVG Styles ── */
+  svg { width: 100%; height: auto; }
+  
+  svg text {
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* ── Layers Diagram ── */
+  .layers-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .layer {
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+    padding: 20px 24px;
+    border-radius: 12px;
+    border: 1px solid;
+    position: relative;
+  }
+
+  .layer-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .layer-content {
+    flex: 1;
+  }
+
+  .layer-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .layer-desc {
+    font-size: 13px;
+    color: var(--textMuted);
+    line-height: 1.5;
+  }
+
+  .layer-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .layer-chip {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .layer--ai { border-color: rgba(139,92,246,0.3); background: var(--purpleGlow); }
+  .layer--ai .layer-number { background: rgba(139,92,246,0.2); color: #a78bfa; }
+  .layer--ai .layer-title { color: #a78bfa; }
+  .layer--ai .layer-chip { background: rgba(139,92,246,0.15); color: #c4b5fd; }
+
+  .layer--skills { border-color: rgba(59,130,246,0.3); background: var(--accentGlow2); }
+  .layer--skills .layer-number { background: rgba(59,130,246,0.2); color: var(--accentLight); }
+  .layer--skills .layer-title { color: var(--accentLight); }
+  .layer--skills .layer-chip { background: rgba(59,130,246,0.15); color: #93c5fd; }
+
+  .layer--registry { border-color: rgba(16,185,129,0.3); background: var(--successGlow); }
+  .layer--registry .layer-number { background: rgba(16,185,129,0.2); color: #34d399; }
+  .layer--registry .layer-title { color: #34d399; }
+  .layer--registry .layer-chip { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+
+  /* ── Flow Diagram ── */
+  .flow-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: center;
+    padding: 20px 0;
+  }
+
+  .flow-step {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    max-width: 800px;
+  }
+
+  .flow-node {
+    flex: 1;
+    padding: 16px 20px;
+    border-radius: 10px;
+    border: 1px solid;
+    position: relative;
+  }
+
+  .flow-node-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+
+  .flow-node-desc {
+    font-size: 12px;
+    color: var(--textMuted);
+  }
+
+  .flow-arrow {
+    display: flex;
+    justify-content: center;
+    padding: 4px 0;
+    color: var(--textDim);
+    font-size: 18px;
+  }
+
+  .flow-badge {
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    position: absolute;
+    top: -8px;
+    right: 12px;
+  }
+
+  /* ── User Journey Cards ── */
+  .journey-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+  }
+
+  .persona-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .persona-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .persona-card--author::before { background: var(--accent); }
+  .persona-card--executor::before { background: var(--success); }
+  .persona-card--admin::before { background: var(--warn); }
+
+  .persona-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    font-size: 20px;
+  }
+
+  .persona-card--author .persona-icon { background: var(--accentGlow); }
+  .persona-card--executor .persona-icon { background: var(--successGlow); }
+  .persona-card--admin .persona-icon { background: var(--warnGlow); }
+
+  .persona-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .persona-role {
+    font-size: 12px;
+    color: var(--textDim);
+    margin-bottom: 16px;
+  }
+
+  .persona-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .persona-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--textMuted);
+    line-height: 1.4;
+  }
+
+  .step-num {
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .persona-card--author .step-num { background: rgba(59,130,246,0.2); color: var(--accentLight); }
+  .persona-card--executor .step-num { background: rgba(16,185,129,0.2); color: #34d399; }
+  .persona-card--admin .step-num { background: rgba(245,158,11,0.2); color: #fbbf24; }
+
+  /* ── Component Diagram ── */
+  .components-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  .comp-group {
+    grid-column: span 4;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid;
+    position: relative;
+  }
+
+  .comp-group-label {
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .comp-box {
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .comp-name {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+
+  .comp-tech {
+    font-size: 11px;
+    color: var(--textDim);
+  }
+
+  /* ── Execution Pipeline ── */
+  .pipeline {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    overflow-x: auto;
+    padding: 20px 0 20px 0;
+  }
+
+  .pipe-node {
+    min-width: 140px;
+    text-align: center;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .pipe-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    border: 2px solid;
+    position: relative;
+  }
+
+  .pipe-label {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+
+  .pipe-sub {
+    font-size: 10px;
+    color: var(--textDim);
+    padding: 0 10px;
+  }
+
+  .pipe-connector {
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 20px;
+    flex-shrink: 0;
+  }
+
+  .pipe-connector svg {
+    width: 40px;
+    height: 20px;
+  }
+
+  /* ── SKILL.md Anatomy ── */
+  .skillmd-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .skillmd-section {
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid;
+  }
+
+  .skillmd-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .skillmd-section-label span {
+    width: 6px;
+    height: 6px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+
+  .skillmd-content {
+    font-size: 12px;
+    color: var(--textMuted);
+    line-height: 1.7;
+  }
+
+  .skillmd-content code {
+    background: rgba(255,255,255,0.06);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--accentLight);
+  }
+
+  .skillmd-full {
+    grid-column: span 2;
+  }
+
+  /* ── Data Flow ── */
+  .dataflow {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 10px 0;
+  }
+
+  .dataflow-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .dataflow-system {
+    width: 160px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .dataflow-system-name {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .dataflow-system-desc {
+    font-size: 10px;
+    color: var(--textDim);
+  }
+
+  .dataflow-arrow {
+    color: var(--textDim);
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .dataflow-data {
+    flex: 1;
+    padding: 8px 14px;
+    border-radius: 6px;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    font-size: 11px;
+    color: var(--textMuted);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  /* ── Dual Path ── */
+  .dual-path {
+    display: grid;
+    grid-template-columns: 1fr 60px 1fr;
+    gap: 0;
+    align-items: stretch;
+  }
+
+  .path-card {
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid;
+  }
+
+  .path-divider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .path-divider-line {
+    width: 1px;
+    flex: 1;
+    background: var(--border);
+  }
+
+  .path-divider-or {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--textDim);
+    letter-spacing: 1px;
+  }
+
+  .path-pct {
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+
+  .path-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .path-desc {
+    font-size: 13px;
+    color: var(--textMuted);
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+
+  .path-traits {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .path-trait {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--textMuted);
+  }
+
+  .path-trait-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Screen Layout ── */
+  .screen-mockup {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .screen-topbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .screen-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .screen-body {
+    display: flex;
+    min-height: 340px;
+  }
+
+  .screen-sidebar {
+    width: 200px;
+    padding: 16px;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sidebar-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--textDim);
+    cursor: default;
+  }
+
+  .sidebar-item--active {
+    background: var(--accentGlow);
+    color: var(--accentLight);
+  }
+
+  .sidebar-item--sub {
+    padding-left: 28px;
+    font-size: 11px;
+  }
+
+  .sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 6px 0;
+  }
+
+  .sidebar-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--textDim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 8px 12px 4px;
+  }
+
+  .screen-main {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .screen-main-title {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .mock-card {
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .mock-card-title {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .mock-field {
+    padding: 8px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--textDim);
+    margin-bottom: 6px;
+  }
+
+  .mock-btn {
+    padding: 8px 20px;
+    background: var(--accent);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    display: inline-block;
+    margin-top: 8px;
+  }
+
+  /* ── Navigation ── */
+  .nav-bar {
+    position: sticky;
+    top: 0;
+    background: rgba(10,13,20,0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 32px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    z-index: 100;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .nav-logo {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--accent);
+    margin-right: 16px;
+  }
+
+  .nav-link {
+    font-size: 12px;
+    color: var(--textDim);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 4px 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .nav-link:hover {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+
+  @media print {
+    .page { page-break-after: always; }
+    .nav-bar { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════ NAVIGATION ════════ -->
+<div class="nav-bar">
+  <div class="nav-logo">SkillForge</div>
+  <a href="#intro" class="nav-link">Introduction</a>
+  <a href="#arch" class="nav-link">Architecture</a>
+  <a href="#layers" class="nav-link">Three Layers</a>
+  <a href="#skillmd" class="nav-link">SKILL.md</a>
+  <a href="#execution" class="nav-link">Execution Flow</a>
+  <a href="#dual" class="nav-link">Dual Path</a>
+  <a href="#pipeline" class="nav-link">Pipeline</a>
+  <a href="#users" class="nav-link">User Journeys</a>
+  <a href="#components" class="nav-link">Components</a>
+  <a href="#screens" class="nav-link">UI Layout</a>
+</div>
+
+<!-- ════════ INTRODUCTION ════════ -->
+<div class="page" id="intro" style="display: flex; flex-direction: column; justify-content: flex-start;">
+  
+  <!-- Hero Section -->
+  <div style="text-align: center; padding: 40px 0 24px;">
+    <div style="display: inline-flex; align-items: center; gap: 12px; padding: 8px 20px; background: var(--accentGlow); border: 1px solid rgba(59,130,246,0.2); border-radius: 99px; margin-bottom: 20px;">
+      <span style="font-size: 14px;">⚡</span>
+      <span style="font-size: 12px; font-weight: 600; color: var(--accentLight); letter-spacing: 1px;">AI-POWERED TEST VALIDATION PLATFORM</span>
+    </div>
+    <div style="font-size: 52px; font-weight: 800; color: var(--text); letter-spacing: -1.5px; margin-bottom: 8px;">SkillForge</div>
+    <div style="font-size: 18px; color: var(--textDim); max-width: 640px; margin: 0 auto; line-height: 1.6;">Empower business users to validate end-to-end digital sales services in plain English — no coding, no API knowledge, no waiting on engineering.</div>
+  </div>
+
+  <!-- Vision & Objective -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; position: relative; overflow: hidden;">
+      <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #3b82f6, #8b5cf6);"></div>
+      <div style="font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--accent); margin-bottom: 10px;">VISION</div>
+      <div style="font-size: 15px; color: var(--text); line-height: 1.7;">A world where any business user can validate any test scenario across any combination of integrated enterprise systems — by simply describing what they want to verify in their own words. The platform translates business intent into API orchestration, making integration testing as easy as asking a question.</div>
+    </div>
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; position: relative; overflow: hidden;">
+      <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #10b981, #14b8a6);"></div>
+      <div style="font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--success); margin-bottom: 10px;">OBJECTIVE</div>
+      <div style="font-size: 15px; color: var(--text); line-height: 1.7;">Build a Skills-based platform where QA engineers encode test knowledge into reusable SKILL.md files, and business users execute them on-demand with dynamic criteria. Replace manual, engineering-dependent testing with self-service AI-powered validation — reducing test cycle time by 10x while expanding coverage.</div>
+    </div>
+  </div>
+
+  <!-- The Problem -->
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; position: relative; overflow: hidden;">
+    <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #ef4444, #f59e0b);"></div>
+    <div style="font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--red); margin-bottom: 14px;">THE PROBLEM</div>
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+      <div style="padding: 16px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); border-radius: 10px;">
+        <div style="font-size: 24px; margin-bottom: 8px;">🐌</div>
+        <div style="font-size: 13px; font-weight: 600; color: #fca5a5; margin-bottom: 6px;">Manual & Slow</div>
+        <div style="font-size: 12px; color: var(--textDim); line-height: 1.5;">Business users rely on QA engineers to run every test scenario manually using Postman, scripts, or direct API calls. Testing becomes the bottleneck for every release.</div>
+      </div>
+      <div style="padding: 16px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); border-radius: 10px;">
+        <div style="font-size: 24px; margin-bottom: 8px;">🧠</div>
+        <div style="font-size: 13px; font-weight: 600; color: #fca5a5; margin-bottom: 6px;">Trillion Combinations</div>
+        <div style="font-size: 12px; color: var(--textDim); line-height: 1.5;">Every business user has a different need — testing products, pricing, tax, channels, markets, vehicle configurations. No fixed test suite can cover infinite variation.</div>
+      </div>
+      <div style="padding: 16px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); border-radius: 10px;">
+        <div style="font-size: 24px; margin-bottom: 8px;">🔒</div>
+        <div style="font-size: 13px; font-weight: 600; color: #fca5a5; margin-bottom: 6px;">Knowledge Silos</div>
+        <div style="font-size: 12px; color: var(--textDim); line-height: 1.5;">API endpoints, authentication flows, data models, and assertion logic live in individual engineers' heads — not in reusable, shareable artifacts.</div>
+      </div>
+      <div style="padding: 16px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); border-radius: 10px;">
+        <div style="font-size: 24px; margin-bottom: 8px;">🚫</div>
+        <div style="font-size: 13px; font-weight: 600; color: #fca5a5; margin-bottom: 6px;">No Self-Service</div>
+        <div style="font-size: 12px; color: var(--textDim); line-height: 1.5;">Business users cannot independently validate any scenario without developer assistance. They wait in queue while time-sensitive testing doesn't get done.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- The Solution -->
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; position: relative; overflow: hidden;">
+    <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #3b82f6, #10b981);"></div>
+    <div style="font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--accent); margin-bottom: 14px;">THE SOLUTION — THREE SIMPLE CONCEPTS</div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+      <div style="padding: 20px; background: rgba(59,130,246,0.06); border: 1px solid rgba(59,130,246,0.15); border-radius: 10px; text-align: center;">
+        <div style="width: 56px; height: 56px; border-radius: 14px; background: var(--accentGlow); border: 1px solid rgba(59,130,246,0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 24px;">📝</div>
+        <div style="font-size: 16px; font-weight: 700; color: var(--accentLight); margin-bottom: 6px;">Skills</div>
+        <div style="font-size: 12px; color: var(--textMuted); line-height: 1.6;">QA engineers encode test scenarios once into reusable SKILL.md files. Each skill is a recipe — describing the workflow, inputs, APIs, and assertions in structured natural language.</div>
+      </div>
+      <div style="padding: 20px; background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.15); border-radius: 10px; text-align: center;">
+        <div style="width: 56px; height: 56px; border-radius: 14px; background: var(--purpleGlow); border: 1px solid rgba(139,92,246,0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 24px;">🤖</div>
+        <div style="font-size: 16px; font-weight: 700; color: #a78bfa; margin-bottom: 6px;">Smart Execution</div>
+        <div style="font-size: 12px; color: var(--textMuted); line-height: 1.6;">AI reads the skill, authenticates with each system, orchestrates API calls in the right order, passes data between steps, and evaluates results — all automatically.</div>
+      </div>
+      <div style="padding: 20px; background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.15); border-radius: 10px; text-align: center;">
+        <div style="width: 56px; height: 56px; border-radius: 14px; background: var(--successGlow); border: 1px solid rgba(16,185,129,0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 24px;">📊</div>
+        <div style="font-size: 16px; font-weight: 700; color: #34d399; margin-bottom: 6px;">Business Results</div>
+        <div style="font-size: 12px; color: var(--textMuted); line-height: 1.6;">Results in plain English: "4 of 4 channels returned valid offers. Orders created. Tax matched expected rates." Failures include clear explanations — no raw API output.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Principles + How It Feels -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+    
+    <!-- Key Principles -->
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; position: relative; overflow: hidden;">
+      <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #8b5cf6, #ec4899);"></div>
+      <div style="font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--purple); margin-bottom: 14px;">KEY PRINCIPLES</div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <div style="width: 24px; height: 24px; border-radius: 6px; background: var(--purpleGlow); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; font-weight: 700; color: #a78bfa;">1</div>
+          <div><span style="font-size: 13px; font-weight: 600; color: #c4b5fd;">SKILL.md is the contract</span><span style="font-size: 12px; color: var(--textDim);"> — A single file serves as documentation, executable instructions, and the bridge between business intent and API orchestration.</span></div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <div style="width: 24px; height: 24px; border-radius: 6px; background: var(--purpleGlow); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; font-weight: 700; color: #a78bfa;">2</div>
+          <div><span style="font-size: 13px; font-weight: 600; color: #c4b5fd;">Author once, execute infinitely</span><span style="font-size: 12px; color: var(--textDim);"> — QA engineers encode knowledge once. Business users run skills with different inputs endlessly — no re-authoring needed.</span></div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <div style="width: 24px; height: 24px; border-radius: 6px; background: var(--purpleGlow); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; font-weight: 700; color: #a78bfa;">3</div>
+          <div><span style="font-size: 13px; font-weight: 600; color: #c4b5fd;">Credentials never exposed</span><span style="font-size: 12px; color: var(--textDim);"> — The Service Registry manages all API auth centrally. Skills reference services by name. Users never see tokens, endpoints, or secrets.</span></div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <div style="width: 24px; height: 24px; border-radius: 6px; background: var(--purpleGlow); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; font-weight: 700; color: #a78bfa;">4</div>
+          <div><span style="font-size: 13px; font-weight: 600; color: #c4b5fd;">95/5 execution model</span><span style="font-size: 12px; color: var(--textDim);"> — AI handles 95% of skills dynamically. The 5% that need 100% determinism get hardened as Temporal workflows — same SKILL.md, guaranteed execution.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- The User Experience -->
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; position: relative; overflow: hidden;">
+      <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #f59e0b, #10b981);"></div>
+      <div style="font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--warn); margin-bottom: 14px;">WHAT IT FEELS LIKE</div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--surface2); border-radius: 8px;">
+          <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59,130,246,0.1); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;">1️⃣</div>
+          <div><span style="font-size: 13px; font-weight: 600; color: var(--text);">Pick a skill</span><span style="font-size: 12px; color: var(--textDim);"> — search or select from your favorites</span></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--surface2); border-radius: 8px;">
+          <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(16,185,129,0.1); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;">2️⃣</div>
+          <div><span style="font-size: 13px; font-weight: 600; color: var(--text);">Fill in criteria</span><span style="font-size: 12px; color: var(--textDim);"> — dynamic form or upload Excel for batch</span></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--surface2); border-radius: 8px;">
+          <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245,158,11,0.1); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;">3️⃣</div>
+          <div><span style="font-size: 13px; font-weight: 600; color: var(--text);">Click Run</span><span style="font-size: 12px; color: var(--textDim);"> — watch real-time progress or come back later</span></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--surface2); border-radius: 8px;">
+          <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(139,92,246,0.1); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;">4️⃣</div>
+          <div><span style="font-size: 13px; font-weight: 600; color: var(--text);">Read results</span><span style="font-size: 12px; color: var(--textDim);"> — plain English pass/fail summary, drill into details</span></div>
+        </div>
+      </div>
+      <div style="margin-top: 14px; padding: 12px 16px; background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.15); border-radius: 8px;">
+        <div style="font-size: 12px; color: #6ee7b7; font-style: italic; line-height: 1.6;">"Verify that a 2025 GMC Sierra in the US qualifies for offers across all sales channels and that the order total includes correct tax."</div>
+        <div style="font-size: 11px; color: var(--textDim); margin-top: 6px;">↑ This is all a business user needs to type. The platform does the rest.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scope & Audience -->
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; position: relative; overflow: hidden;">
+    <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #14b8a6, #3b82f6);"></div>
+    <div style="font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--teal); margin-bottom: 14px;">DOCUMENT GUIDE — WHAT FOLLOWS</div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+      <div style="padding: 14px; background: var(--surface2); border-radius: 8px; border-left: 3px solid var(--accent);">
+        <div style="font-size: 12px; font-weight: 700; color: var(--accentLight); margin-bottom: 4px;">For Executives & Stakeholders</div>
+        <div style="font-size: 11px; color: var(--textDim); line-height: 1.5;">Start with <strong style="color: var(--textMuted);">Architecture</strong> for the big picture, then <strong style="color: var(--textMuted);">Three Layers</strong> and <strong style="color: var(--textMuted);">Dual Path</strong> for the execution model, and <strong style="color: var(--textMuted);">User Journeys</strong> for how each persona interacts.</div>
+      </div>
+      <div style="padding: 14px; background: var(--surface2); border-radius: 8px; border-left: 3px solid var(--purple);">
+        <div style="font-size: 12px; font-weight: 700; color: #a78bfa; margin-bottom: 4px;">For Architects & Tech Leads</div>
+        <div style="font-size: 11px; color: var(--textDim); line-height: 1.5;">Focus on <strong style="color: var(--textMuted);">Architecture</strong>, <strong style="color: var(--textMuted);">SKILL.md Anatomy</strong>, <strong style="color: var(--textMuted);">Execution Flow</strong>, <strong style="color: var(--textMuted);">Pipeline</strong> for data threading, and <strong style="color: var(--textMuted);">Components</strong> for the full tech stack breakdown.</div>
+      </div>
+      <div style="padding: 14px; background: var(--surface2); border-radius: 8px; border-left: 3px solid var(--success);">
+        <div style="font-size: 12px; font-weight: 700; color: #34d399; margin-bottom: 4px;">For QA & Business Users</div>
+        <div style="font-size: 11px; color: var(--textDim); line-height: 1.5;">Start with <strong style="color: var(--textMuted);">Three Layers</strong> to understand the model, then <strong style="color: var(--textMuted);">User Journeys</strong> for your workflow, <strong style="color: var(--textMuted);">Pipeline</strong> for the test data flow, and <strong style="color: var(--textMuted);">UI Layout</strong> for what the product looks like.</div>
+      </div>
+    </div>
+    <div style="margin-top: 16px; text-align: center; font-size: 12px; color: var(--textDim);">Use the navigation bar above to jump directly to any diagram. This document contains <strong style="color: var(--textMuted);">10 pages</strong> covering the full product architecture, from vision to implementation.</div>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 1: HIGH-LEVEL ARCHITECTURE ════════ -->
+<div class="page" id="arch">
+  <div class="page-label">Diagram 1 of 9</div>
+  <div class="page-title">High-Level System Architecture</div>
+  <div class="page-subtitle">End-to-end view of how SkillForge connects business users to enterprise APIs through AI-powered skill execution.</div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 1000 620" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Background Grid -->
+      <defs>
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
+        </pattern>
+        <linearGradient id="blueGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#1e3a5f"/>
+          <stop offset="100%" stop-color="#1a2744"/>
+        </linearGradient>
+        <linearGradient id="greenGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#1a3d2e"/>
+          <stop offset="100%" stop-color="#1a2e2a"/>
+        </linearGradient>
+        <linearGradient id="purpleGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#2d1f5e"/>
+          <stop offset="100%" stop-color="#1f1a44"/>
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+        </filter>
+      </defs>
+      <rect width="1000" height="620" fill="url(#grid)"/>
+
+      <!-- USERS SECTION -->
+      <rect x="20" y="20" width="200" height="260" rx="12" fill="#111827" stroke="#1e2d45" stroke-width="1"/>
+      <text x="120" y="50" text-anchor="middle" fill="#64748b" font-size="10" font-weight="700" letter-spacing="2">USERS</text>
+      
+      <rect x="40" y="70" width="160" height="50" rx="8" fill="url(#blueGrad)" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="120" y="92" text-anchor="middle" fill="#60a5fa" font-size="12" font-weight="600">Business Users</text>
+      <text x="120" y="107" text-anchor="middle" fill="#64748b" font-size="9">Execute Skills</text>
+
+      <rect x="40" y="132" width="160" height="50" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="120" y="154" text-anchor="middle" fill="#34d399" font-size="12" font-weight="600">QA Engineers</text>
+      <text x="120" y="169" text-anchor="middle" fill="#64748b" font-size="9">Author Skills</text>
+
+      <rect x="40" y="194" width="160" height="50" rx="8" fill="rgba(245,158,11,0.08)" stroke="#f59e0b" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="120" y="216" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="600">Admins</text>
+      <text x="120" y="231" text-anchor="middle" fill="#64748b" font-size="9">Manage Registry</text>
+
+      <!-- ARROWS: Users → Platform -->
+      <path d="M220 100 L280 100" stroke="#3b82f6" stroke-width="1.5" stroke-opacity="0.5" marker-end="url(#arrowBlue)"/>
+      <path d="M220 157 L280 200" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.5" marker-end="url(#arrowGreen)"/>
+      <path d="M220 219 L280 340" stroke="#f59e0b" stroke-width="1.5" stroke-opacity="0.5" marker-end="url(#arrowYellow)"/>
+      
+      <defs>
+        <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" opacity="0.6"/>
+        </marker>
+        <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" opacity="0.6"/>
+        </marker>
+        <marker id="arrowYellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b" opacity="0.6"/>
+        </marker>
+        <marker id="arrowPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b5cf6" opacity="0.6"/>
+        </marker>
+        <marker id="arrowWhite" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" opacity="0.5"/>
+        </marker>
+      </defs>
+
+      <!-- PLATFORM CORE -->
+      <rect x="280" y="20" width="440" height="400" rx="12" fill="#111827" stroke="#1e2d45" stroke-width="1"/>
+      <text x="500" y="50" text-anchor="middle" fill="#64748b" font-size="10" font-weight="700" letter-spacing="2">SKILLFORGE PLATFORM</text>
+
+      <!-- React Frontend -->
+      <rect x="300" y="70" width="400" height="45" rx="8" fill="url(#blueGrad)" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="500" y="92" text-anchor="middle" fill="#60a5fa" font-size="13" font-weight="700">React Frontend</text>
+      <text x="500" y="106" text-anchor="middle" fill="#475569" font-size="9">Definition  •  Execution  •  Favorites  •  History  •  Dashboard</text>
+
+      <!-- Backend API -->
+      <rect x="300" y="130" width="400" height="45" rx="8" fill="#1a2236" stroke="#1e2d45" stroke-width="1"/>
+      <text x="500" y="152" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="700">Backend API</text>
+      <text x="500" y="166" text-anchor="middle" fill="#475569" font-size="9">Java Spring Boot / Node.js / Python FastAPI</text>
+
+      <!-- Skills Storage -->
+      <rect x="300" y="192" width="190" height="60" rx="8" fill="#1a2236" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="395" y="218" text-anchor="middle" fill="#93c5fd" font-size="12" font-weight="600">Skills Storage</text>
+      <text x="395" y="235" text-anchor="middle" fill="#475569" font-size="9">SKILL.md + Scripts</text>
+      <text x="395" y="247" text-anchor="middle" fill="#475569" font-size="9">Local / AWS S3</text>
+
+      <!-- Database -->
+      <rect x="510" y="192" width="190" height="60" rx="8" fill="#1a2236" stroke="#1e2d45" stroke-width="1"/>
+      <text x="605" y="218" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">PostgreSQL</text>
+      <text x="605" y="235" text-anchor="middle" fill="#475569" font-size="9">Skills Metadata</text>
+      <text x="605" y="247" text-anchor="middle" fill="#475569" font-size="9">Executions • Users</text>
+
+      <!-- AI Execution Engine -->
+      <rect x="300" y="270" width="250" height="60" rx="8" fill="url(#purpleGrad)" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="425" y="296" text-anchor="middle" fill="#a78bfa" font-size="13" font-weight="700">AI Execution Engine</text>
+      <text x="425" y="312" text-anchor="middle" fill="#7c3aed" font-size="9">Claude Sonnet / Opus</text>
+
+      <!-- Temporal -->
+      <rect x="565" y="270" width="135" height="60" rx="8" fill="rgba(236,72,153,0.08)" stroke="#ec4899" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="632" y="296" text-anchor="middle" fill="#f472b6" font-size="12" font-weight="600">Temporal</text>
+      <text x="632" y="312" text-anchor="middle" fill="#64748b" font-size="9">Hardened Path</text>
+
+      <!-- Service Registry -->
+      <rect x="300" y="348" width="400" height="55" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="500" y="373" text-anchor="middle" fill="#34d399" font-size="13" font-weight="700">Service Registry</text>
+      <text x="500" y="390" text-anchor="middle" fill="#475569" font-size="9">API Endpoints  •  JWT Auth Config  •  Swagger Specs  •  Credentials Vault</text>
+
+      <!-- ARROWS: Platform → External -->
+      <path d="M700 375 L760 375" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.5" marker-end="url(#arrowGreen)"/>
+      <path d="M500 420 L500 450" stroke="#94a3b8" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4,4"/>
+
+      <!-- EXTERNAL APIs -->
+      <rect x="760" y="20" width="220" height="400" rx="12" fill="#111827" stroke="#1e2d45" stroke-width="1"/>
+      <text x="870" y="50" text-anchor="middle" fill="#64748b" font-size="10" font-weight="700" letter-spacing="2">ENTERPRISE APIs</text>
+
+      <rect x="780" y="70" width="180" height="42" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.25"/>
+      <text x="870" y="90" text-anchor="middle" fill="#6ee7b7" font-size="11" font-weight="600">TDI Service</text>
+      <text x="870" y="103" text-anchor="middle" fill="#475569" font-size="9">Vehicle / Customer Creation</text>
+
+      <rect x="780" y="124" width="180" height="42" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.25"/>
+      <text x="870" y="144" text-anchor="middle" fill="#6ee7b7" font-size="11" font-weight="600">Digital Sales Services</text>
+      <text x="870" y="157" text-anchor="middle" fill="#475569" font-size="9">Onboarding / Qualification</text>
+
+      <rect x="780" y="178" width="180" height="42" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.25"/>
+      <text x="870" y="198" text-anchor="middle" fill="#6ee7b7" font-size="11" font-weight="600">Offers Microservice</text>
+      <text x="870" y="211" text-anchor="middle" fill="#475569" font-size="9">Offer Qualification / Channels</text>
+
+      <rect x="780" y="232" width="180" height="42" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.25"/>
+      <text x="870" y="252" text-anchor="middle" fill="#6ee7b7" font-size="11" font-weight="600">Orders API</text>
+      <text x="870" y="265" text-anchor="middle" fill="#475569" font-size="9">Quotes / Orders / Fulfillment</text>
+
+      <rect x="780" y="286" width="180" height="42" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.25"/>
+      <text x="870" y="306" text-anchor="middle" fill="#6ee7b7" font-size="11" font-weight="600">EventHub</text>
+      <text x="870" y="319" text-anchor="middle" fill="#475569" font-size="9">Async Events / Messages</text>
+
+      <rect x="780" y="340" width="180" height="42" rx="8" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.25"/>
+      <text x="870" y="360" text-anchor="middle" fill="#6ee7b7" font-size="11" font-weight="600">JWT Token Server</text>
+      <text x="870" y="373" text-anchor="middle" fill="#475569" font-size="9">Authentication / Credentials</text>
+
+      <!-- Bottom: Auth Flow -->
+      <rect x="20" y="460" width="960" height="140" rx="12" fill="#111827" stroke="#1e2d45" stroke-width="1"/>
+      <text x="500" y="490" text-anchor="middle" fill="#64748b" font-size="10" font-weight="700" letter-spacing="2">AUTHENTICATION &amp; SECURITY FLOW</text>
+      
+      <!-- Auth boxes -->
+      <rect x="50" y="510" width="170" height="45" rx="6" fill="rgba(245,158,11,0.08)" stroke="#f59e0b" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="135" y="533" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="600">Credentials Vault</text>
+      <text x="135" y="547" text-anchor="middle" fill="#475569" font-size="9">Secrets Manager / Vault</text>
+
+      <path d="M220 532 L280 532" stroke="#f59e0b" stroke-width="1"5" stroke-opacity="0.4" marker-end="url(#arrowYellow)"/>
+
+      <rect x="280" y="510" width="170" height="45" rx="6" fill="rgba(59,130,246,0.08)" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="365" y="533" text-anchor="middle" fill="#60a5fa" font-size="11" font-weight="600">Client ID + Secret</text>
+      <text x="365" y="547" text-anchor="middle" fill="#475569" font-size="9">Per API per Environment</text>
+
+      <path d="M450 532 L520 532" stroke="#3b82f6" stroke-width="1.5" stroke-opacity="0.4" marker-end="url(#arrowBlue)"/>
+
+      <rect x="520" y="510" width="170" height="45" rx="6" fill="url(#greenGrad)" stroke="#10b981" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="605" y="533" text-anchor="middle" fill="#34d399" font-size="11" font-weight="600">JWT Token Server</text>
+      <text x="605" y="547" text-anchor="middle" fill="#475569" font-size="9">Token Generation</text>
+
+      <path d="M690 532 L760 532" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.4" marker-end="url(#arrowGreen)"/>
+
+      <rect x="760" y="510" width="190" height="45" rx="6" fill="url(#purpleGrad)" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="855" y="533" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="600">Authenticated API Calls</text>
+      <text x="855" y="547" text-anchor="middle" fill="#475569" font-size="9">Bearer Token in Headers</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 2: THREE LAYERS ════════ -->
+<div class="page" id="layers">
+  <div class="page-label">Diagram 2 of 9</div>
+  <div class="page-title">Three-Layer Architecture</div>
+  <div class="page-subtitle">The platform's three distinct layers — each with a clear owner, responsibility, and interface boundary.</div>
+
+  <div class="diagram">
+    <div class="layers-grid">
+      <div class="layer layer--ai">
+        <div class="layer-number">3</div>
+        <div class="layer-content">
+          <div class="layer-title">AI Execution Engine</div>
+          <div class="layer-desc">Reads SKILL.md, interprets workflow, orchestrates API calls, evaluates assertions, generates business-language results. The intelligence layer that makes everything accessible to non-technical users.</div>
+          <div class="layer-items">
+            <span class="layer-chip">Claude Sonnet/Opus</span>
+            <span class="layer-chip">NL Interpretation</span>
+            <span class="layer-chip">Dynamic Orchestration</span>
+            <span class="layer-chip">Result Summarization</span>
+            <span class="layer-chip">Temporal Fallback</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="layer layer--skills">
+        <div class="layer-number">2</div>
+        <div class="layer-content">
+          <div class="layer-title">Skills Layer</div>
+          <div class="layer-desc">Self-contained test scenario definitions authored by QA engineers. Each skill packages a SKILL.md (the contract) with optional scripts. Defines inputs, workflow tasks, and assertions. Stored, versioned, and shareable.</div>
+          <div class="layer-items">
+            <span class="layer-chip">SKILL.md</span>
+            <span class="layer-chip">UICriteria</span>
+            <span class="layer-chip">WorkflowDefinition</span>
+            <span class="layer-chip">.sh / .py / .js Scripts</span>
+            <span class="layer-chip">S3 / Local Storage</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="layer layer--registry">
+        <div class="layer-number">1</div>
+        <div class="layer-content">
+          <div class="layer-title">Service Registry</div>
+          <div class="layer-desc">Platform-managed catalog of all enterprise APIs. Pre-registered with connection details, JWT authentication config, Swagger specs, and credential references. Skills reference services by name — never by URL or credential.</div>
+          <div class="layer-items">
+            <span class="layer-chip">TDI</span>
+            <span class="layer-chip">Digital Sales Services</span>
+            <span class="layer-chip">Offers API</span>
+            <span class="layer-chip">Orders API</span>
+            <span class="layer-chip">EventHub</span>
+            <span class="layer-chip">JWT Token Server</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 3: SKILL.MD ANATOMY ════════ -->
+<div class="page" id="skillmd">
+  <div class="page-label">Diagram 3 of 9</div>
+  <div class="page-title">SKILL.md Anatomy</div>
+  <div class="page-subtitle">The internal structure of a SKILL.md file — the single source of truth that bridges business intent and API execution.</div>
+
+  <div class="diagram">
+    <div class="skillmd-layout">
+      <div class="skillmd-section" style="border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.04);">
+        <div class="skillmd-section-label" style="color: #60a5fa;"><span style="background: #3b82f6;"></span> METADATA (YAML Front Matter)</div>
+        <div class="skillmd-content">
+          <code>name</code> Skill name<br>
+          <code>version</code> Semantic version<br>
+          <code>author</code> Creator<br>
+          <code>tags</code> Searchable labels<br>
+          <code>execution_mode</code> <code>ai</code> or <code>workflow</code><br>
+          <code>description</code> Purpose and scope
+        </div>
+      </div>
+
+      <div class="skillmd-section" style="border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.04);">
+        <div class="skillmd-section-label" style="color: #34d399;"><span style="background: #10b981;"></span> UICriteria</div>
+        <div class="skillmd-content">
+          <code>&lt;Type&gt;</code> HTML / Excel / Both<br><br>
+          <strong style="color:#6ee7b7;">HTML Mode:</strong> Field definitions with label, type (<code>select</code>, <code>multi-select</code>, <code>text</code>, <code>checkbox</code>), options, defaults, required flag<br><br>
+          <strong style="color:#6ee7b7;">Excel Mode:</strong> Expected columns, types, downloadable template
+        </div>
+      </div>
+
+      <div class="skillmd-section skillmd-full" style="border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.04);">
+        <div class="skillmd-section-label" style="color: #a78bfa;"><span style="background: #8b5cf6;"></span> WorkflowDefinition — Tasks</div>
+        <div class="skillmd-content" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+          <div style="padding: 10px; background: rgba(139,92,246,0.06); border-radius: 6px;">
+            <strong style="color: #c4b5fd;">Task 1: Create Vehicle</strong><br>
+            Service: <code>TDI</code><br>
+            Inputs: <code>{model_year}</code>, <code>{make}</code>, <code>{country}</code><br>
+            Capture: <code>account_number</code>, <code>vin</code><br>
+            Assert: values not null
+          </div>
+          <div style="padding: 10px; background: rgba(139,92,246,0.06); border-radius: 6px;">
+            <strong style="color: #c4b5fd;">Task 2: Onboard</strong><br>
+            Service: <code>DSS</code><br>
+            Inputs: <code>{Task1.account_number}</code>, <code>{Task1.vin}</code><br>
+            Capture: <code>enrollment_status</code><br>
+            Assert: status = ACTIVE
+          </div>
+          <div style="padding: 10px; background: rgba(139,92,246,0.06); border-radius: 6px;">
+            <strong style="color: #c4b5fd;">Task 3: Get Offers</strong><br>
+            Service: <code>OffersAPI</code><br>
+            Loop: <code>for each channel</code><br>
+            Capture: <code>offers[]</code>, <code>offer_ids[]</code><br>
+            Assert: offers not empty
+          </div>
+          <div style="padding: 10px; background: rgba(139,92,246,0.06); border-radius: 6px;">
+            <strong style="color: #c4b5fd;">Task 4: Create Quote</strong><br>
+            Service: <code>OrdersAPI</code><br>
+            Loop: <code>for each offer</code><br>
+            Capture: <code>quote_id</code>, <code>tax_details</code><br>
+            Conditional asserts on tax/pricing
+          </div>
+          <div style="padding: 10px; background: rgba(139,92,246,0.06); border-radius: 6px;">
+            <strong style="color: #c4b5fd;">Task 5: Create Order</strong><br>
+            Service: <code>OrdersAPI</code><br>
+            Loop: <code>for each quote</code><br>
+            Capture: <code>order_id</code>, <code>order_status</code><br>
+            Assert: status = CREATED
+          </div>
+          <div style="padding: 10px; background: rgba(139,92,246,0.06); border-radius: 6px;">
+            <strong style="color: #c4b5fd;">Task 6: Verify</strong><br>
+            Service: <code>OrdersAPI</code><br>
+            Operation: <code>getOrders</code><br>
+            Assert: order count matches<br>
+            Optional: <code>EventHub</code> listen
+          </div>
+        </div>
+      </div>
+
+      <div class="skillmd-section" style="border-color: rgba(236,72,153,0.3); background: rgba(236,72,153,0.04);">
+        <div class="skillmd-section-label" style="color: #f472b6;"><span style="background: #ec4899;"></span> OutputDefinition (Optional)</div>
+        <div class="skillmd-content">
+          Natural language description of desired report format: summary table, channel breakdown, tax details, pricing comparison, pass/fail per step.
+        </div>
+      </div>
+
+      <div class="skillmd-section" style="border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.04);">
+        <div class="skillmd-section-label" style="color: #fbbf24;"><span style="background: #f59e0b;"></span> Scripts (Optional)</div>
+        <div class="skillmd-content">
+          Supporting scripts for complex logic:<br>
+          <code>eventhub_listener.py</code> → Task 6<br>
+          <code>tax_validator.sh</code> → Task 4<br>
+          Executed in sandboxed Docker containers.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 4: EXECUTION FLOW ════════ -->
+<div class="page" id="execution">
+  <div class="page-label">Diagram 4 of 9</div>
+  <div class="page-title">Execution Flow</div>
+  <div class="page-subtitle">Step-by-step process from user action to results — how the platform orchestrates a skill execution.</div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 1000 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Step 1 -->
+      <rect x="20" y="30" width="180" height="90" rx="10" fill="rgba(59,130,246,0.08)" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="110" y="58" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="700" letter-spacing="1">STEP 1</text>
+      <text x="110" y="78" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">Select Skill</text>
+      <text x="110" y="96" text-anchor="middle" fill="#64748b" font-size="9">User picks from</text>
+      <text x="110" y="108" text-anchor="middle" fill="#64748b" font-size="9">favorites or library</text>
+      <path d="M200 75 L240 75" stroke="#3b82f6" stroke-width="1.5" stroke-opacity="0.4" marker-end="url(#arrowBlue)"/>
+
+      <!-- Step 2 -->
+      <rect x="240" y="30" width="180" height="90" rx="10" fill="rgba(16,185,129,0.08)" stroke="#10b981" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="330" y="58" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700" letter-spacing="1">STEP 2</text>
+      <text x="330" y="78" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">Fill Criteria</text>
+      <text x="330" y="96" text-anchor="middle" fill="#64748b" font-size="9">Dynamic form from</text>
+      <text x="330" y="108" text-anchor="middle" fill="#64748b" font-size="9">UICriteria or Excel</text>
+      <path d="M420 75 L460 75" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.4" marker-end="url(#arrowGreen)"/>
+
+      <!-- Step 3 -->
+      <rect x="460" y="30" width="180" height="90" rx="10" fill="rgba(245,158,11,0.08)" stroke="#f59e0b" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="550" y="58" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="700" letter-spacing="1">STEP 3</text>
+      <text x="550" y="78" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">Click Run</text>
+      <text x="550" y="96" text-anchor="middle" fill="#64748b" font-size="9">Validate criteria</text>
+      <text x="550" y="108" text-anchor="middle" fill="#64748b" font-size="9">Generate Execution ID</text>
+      <path d="M640 75 L680 75" stroke="#f59e0b" stroke-width="1.5" stroke-opacity="0.4" marker-end="url(#arrowYellow)"/>
+
+      <!-- Step 4 -->
+      <rect x="680" y="30" width="180" height="90" rx="10" fill="rgba(139,92,246,0.08)" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="770" y="58" text-anchor="middle" fill="#8b5cf6" font-size="10" font-weight="700" letter-spacing="1">STEP 4</text>
+      <text x="770" y="78" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">Queue Execution</text>
+      <text x="770" y="96" text-anchor="middle" fill="#64748b" font-size="9">Submit to AI engine</text>
+      <text x="770" y="108" text-anchor="middle" fill="#64748b" font-size="9">or Temporal workflow</text>
+
+      <!-- Down arrow -->
+      <path d="M770 120 L770 170" stroke="#8b5cf6" stroke-width="1.5" stroke-opacity="0.4" marker-end="url(#arrowPurple)"/>
+
+      <!-- Processing Box -->
+      <rect x="140" y="170" width="720" height="180" rx="12" fill="rgba(139,92,246,0.04)" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.2" stroke-dasharray="4,4"/>
+      <text x="500" y="195" text-anchor="middle" fill="#8b5cf6" font-size="10" font-weight="700" letter-spacing="2">AI EXECUTION ENGINE — PROCESSING</text>
+
+      <!-- Internal steps -->
+      <rect x="160" y="210" width="130" height="55" rx="6" fill="rgba(139,92,246,0.1)" stroke="#8b5cf6" stroke-width="0.5" stroke-opacity="0.3"/>
+      <text x="225" y="233" text-anchor="middle" fill="#c4b5fd" font-size="10" font-weight="600">Parse SKILL.md</text>
+      <text x="225" y="250" text-anchor="middle" fill="#64748b" font-size="8">Extract sections</text>
+      <path d="M290 238 L310 238" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.3" marker-end="url(#arrowPurple)"/>
+
+      <rect x="310" y="210" width="130" height="55" rx="6" fill="rgba(139,92,246,0.1)" stroke="#8b5cf6" stroke-width="0.5" stroke-opacity="0.3"/>
+      <text x="375" y="233" text-anchor="middle" fill="#c4b5fd" font-size="10" font-weight="600">Resolve Services</text>
+      <text x="375" y="250" text-anchor="middle" fill="#64748b" font-size="8">Registry lookup</text>
+      <path d="M440 238 L460 238" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.3" marker-end="url(#arrowPurple)"/>
+
+      <rect x="460" y="210" width="130" height="55" rx="6" fill="rgba(139,92,246,0.1)" stroke="#8b5cf6" stroke-width="0.5" stroke-opacity="0.3"/>
+      <text x="525" y="233" text-anchor="middle" fill="#c4b5fd" font-size="10" font-weight="600">Authenticate</text>
+      <text x="525" y="250" text-anchor="middle" fill="#64748b" font-size="8">JWT tokens</text>
+      <path d="M590 238 L610 238" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.3" marker-end="url(#arrowPurple)"/>
+
+      <rect x="610" y="210" width="130" height="55" rx="6" fill="rgba(139,92,246,0.1)" stroke="#8b5cf6" stroke-width="0.5" stroke-opacity="0.3"/>
+      <text x="675" y="233" text-anchor="middle" fill="#c4b5fd" font-size="10" font-weight="600">Execute Tasks</text>
+      <text x="675" y="250" text-anchor="middle" fill="#64748b" font-size="8">Sequential + fan-out</text>
+
+      <!-- Assertions row -->
+      <rect x="310" y="280" width="280" height="50" rx="6" fill="rgba(16,185,129,0.08)" stroke="#10b981" stroke-width="0.5" stroke-opacity="0.3"/>
+      <text x="450" y="302" text-anchor="middle" fill="#34d399" font-size="10" font-weight="600">Evaluate Assertions per Task</text>
+      <text x="450" y="318" text-anchor="middle" fill="#64748b" font-size="8">Check response fields, validate business rules, compare expected values</text>
+
+      <path d="M675 265 L675 280 L590 280" stroke="#10b981" stroke-width="1" stroke-opacity="0.3"/>
+
+      <!-- Down arrow from processing -->
+      <path d="M500 350 L500 400" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.4" marker-end="url(#arrowGreen)"/>
+
+      <!-- Results -->
+      <rect x="200" y="400" width="280" height="80" rx="10" fill="rgba(16,185,129,0.08)" stroke="#10b981" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="340" y="428" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700" letter-spacing="1">STEP 5</text>
+      <text x="340" y="448" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">Results &amp; AI Summary</text>
+      <text x="340" y="466" text-anchor="middle" fill="#64748b" font-size="9">Pass/fail per task • Business-language report • Error details</text>
+
+      <path d="M480 440 L530 440" stroke="#94a3b8" stroke-width="1" stroke-opacity="0.3" marker-end="url(#arrowWhite)"/>
+
+      <!-- Store -->
+      <rect x="530" y="400" width="280" height="80" rx="10" fill="rgba(59,130,246,0.06)" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="670" y="428" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="700" letter-spacing="1">STEP 6</text>
+      <text x="670" y="448" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">Store &amp; Notify</text>
+      <text x="670" y="466" text-anchor="middle" fill="#64748b" font-size="9">Persist to Past Executions • Send notification • Available for export</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 5: DUAL EXECUTION PATH ════════ -->
+<div class="page" id="dual">
+  <div class="page-label">Diagram 5 of 9</div>
+  <div class="page-title">Dual Execution Model</div>
+  <div class="page-subtitle">Same SKILL.md, two execution paths — AI-powered for flexibility, Temporal workflows for deterministic reliability.</div>
+
+  <div class="diagram">
+    <div class="dual-path">
+      <div class="path-card" style="border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.04);">
+        <div class="path-pct" style="color: #a78bfa;">~95%</div>
+        <div class="path-title" style="color: #c4b5fd;">AI-Interpreted Execution</div>
+        <div class="path-desc">The AI reads the SKILL.md at runtime, interprets the workflow dynamically, and orchestrates API calls. Default path for all skills. No developer needed after skill authoring.</div>
+        <div class="path-traits">
+          <div class="path-trait"><div class="path-trait-dot" style="background: #a78bfa;"></div> Fast to create — author SKILL.md and go</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #a78bfa;"></div> Flexible — handles variations gracefully</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #a78bfa;"></div> AI interprets natural language assertions</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #a78bfa;"></div> Cost: AI tokens per execution</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #a78bfa;"></div> Best for: ad-hoc testing, new scenarios, exploration</div>
+        </div>
+      </div>
+
+      <div class="path-divider">
+        <div class="path-divider-line"></div>
+        <div class="path-divider-or">OR</div>
+        <div class="path-divider-line"></div>
+      </div>
+
+      <div class="path-card" style="border-color: rgba(236,72,153,0.3); background: rgba(236,72,153,0.04);">
+        <div class="path-pct" style="color: #f472b6;">~5%</div>
+        <div class="path-title" style="color: #fda4af;">Hardened Workflow Execution</div>
+        <div class="path-desc">A developer implements the same SKILL.md as a Temporal workflow. 100% deterministic, repeatable, and reliable. Same inputs and outputs — user sees no difference.</div>
+        <div class="path-traits">
+          <div class="path-trait"><div class="path-trait-dot" style="background: #f472b6;"></div> Requires developer implementation</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #f472b6;"></div> Deterministic — same input, same execution</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #f472b6;"></div> Built-in retry, timeout, failure recovery</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #f472b6;"></div> Java / Node.js / Go / Python SDK</div>
+          <div class="path-trait"><div class="path-trait-dot" style="background: #f472b6;"></div> Best for: release gates, compliance, regression</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align: center; padding: 24px 0 8px; color: var(--textDim); font-size: 13px;">
+      <strong style="color: var(--textMuted);">Lifecycle:</strong> Start with AI execution → Identify critical skills → Harden to Temporal as needed
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 6: DATA PIPELINE ════════ -->
+<div class="page" id="pipeline">
+  <div class="page-label">Diagram 6 of 9</div>
+  <div class="page-title">Test Execution Pipeline</div>
+  <div class="page-subtitle">The actual data flow through your digital sales services during a typical end-to-end skill execution.</div>
+
+  <div class="diagram">
+    <div class="pipeline">
+      <div class="pipe-node">
+        <div class="pipe-icon" style="background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.4); color: #60a5fa;">🚗</div>
+        <div class="pipe-label" style="color: #60a5fa;">TDI</div>
+        <div class="pipe-sub">Create vehicle<br>& customer<br><br><strong style="color:#93c5fd;">Output:</strong><br>account_number<br>vin</div>
+      </div>
+      <div class="pipe-connector"><svg viewBox="0 0 40 20"><path d="M0 10 L32 10" stroke="#475569" stroke-width="1.5"/><path d="M28 5 L36 10 L28 15" fill="#475569"/></svg></div>
+
+      <div class="pipe-node">
+        <div class="pipe-icon" style="background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.4); color: #34d399;">📋</div>
+        <div class="pipe-label" style="color: #34d399;">DSS</div>
+        <div class="pipe-sub">Onboard &<br>qualify<br><br><strong style="color:#6ee7b7;">Output:</strong><br>enrollment_status<br>trial_offers</div>
+      </div>
+      <div class="pipe-connector"><svg viewBox="0 0 40 20"><path d="M0 10 L32 10" stroke="#475569" stroke-width="1.5"/><path d="M28 5 L36 10 L28 15" fill="#475569"/></svg></div>
+
+      <div class="pipe-node">
+        <div class="pipe-icon" style="background: rgba(139,92,246,0.1); border-color: rgba(139,92,246,0.4); color: #a78bfa;">🎯</div>
+        <div class="pipe-label" style="color: #a78bfa;">Offers API</div>
+        <div class="pipe-sub">Get offers<br><em style="color:#c4b5fd;">per channel</em><br><br><strong style="color:#c4b5fd;">Fan-out:</strong><br>MC_GMOC<br>MC_ONECRM<br>MC_WEB_APP<br>MC_ADVSR</div>
+      </div>
+      <div class="pipe-connector"><svg viewBox="0 0 40 20"><path d="M0 10 L32 10" stroke="#475569" stroke-width="1.5"/><path d="M28 5 L36 10 L28 15" fill="#475569"/></svg></div>
+
+      <div class="pipe-node">
+        <div class="pipe-icon" style="background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.4); color: #fbbf24;">💰</div>
+        <div class="pipe-label" style="color: #fbbf24;">Quote</div>
+        <div class="pipe-sub">Create quote<br><em style="color:#fcd34d;">per offer</em><br><br><strong style="color:#fcd34d;">Output:</strong><br>quote_id<br>total + tax</div>
+      </div>
+      <div class="pipe-connector"><svg viewBox="0 0 40 20"><path d="M0 10 L32 10" stroke="#475569" stroke-width="1.5"/><path d="M28 5 L36 10 L28 15" fill="#475569"/></svg></div>
+
+      <div class="pipe-node">
+        <div class="pipe-icon" style="background: rgba(236,72,153,0.1); border-color: rgba(236,72,153,0.4); color: #f472b6;">📦</div>
+        <div class="pipe-label" style="color: #f472b6;">Order</div>
+        <div class="pipe-sub">Create order<br><em style="color:#fda4af;">per quote</em><br><br><strong style="color:#fda4af;">Output:</strong><br>order_id<br>order_status</div>
+      </div>
+      <div class="pipe-connector"><svg viewBox="0 0 40 20"><path d="M0 10 L32 10" stroke="#475569" stroke-width="1.5"/><path d="M28 5 L36 10 L28 15" fill="#475569"/></svg></div>
+
+      <div class="pipe-node">
+        <div class="pipe-icon" style="background: rgba(20,184,166,0.1); border-color: rgba(20,184,166,0.4); color: #2dd4bf;">✅</div>
+        <div class="pipe-label" style="color: #2dd4bf;">Verify</div>
+        <div class="pipe-sub">getOrders +<br>EventHub<br><br><strong style="color:#5eead4;">Assert:</strong><br>all orders exist<br>status correct</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 16px; padding: 16px; background: var(--surface2); border-radius: 8px; border: 1px dashed var(--border);">
+      <div style="font-size: 11px; color: var(--textDim); margin-bottom: 8px; font-weight: 600; letter-spacing: 0.5px;">DATA THREADING</div>
+      <div style="font-size: 12px; color: var(--textMuted); line-height: 1.8; font-family: 'SF Mono', 'Fira Code', monospace;">
+        TDI → <span style="color: #60a5fa;">account_number, vin</span> → DSS → Offers(×4 channels) → <span style="color: #a78bfa;">offers[]</span> → Quote(×N offers) → <span style="color: #fbbf24;">quote_ids[]</span> → Order(×N quotes) → <span style="color: #f472b6;">order_ids[]</span> → Verify
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 7: USER JOURNEYS ════════ -->
+<div class="page" id="users">
+  <div class="page-label">Diagram 7 of 9</div>
+  <div class="page-title">User Journeys</div>
+  <div class="page-subtitle">How each persona interacts with the platform — from skill creation to execution to administration.</div>
+
+  <div class="diagram">
+    <div class="journey-grid">
+      <div class="persona-card persona-card--author">
+        <div class="persona-icon">🛠️</div>
+        <div class="persona-title" style="color: #60a5fa;">Skill Author</div>
+        <div class="persona-role">QA Engineer / Technical Lead</div>
+        <div class="persona-steps">
+          <div class="persona-step"><div class="step-num">1</div>Identify a business scenario that needs repeatable testing</div>
+          <div class="persona-step"><div class="step-num">2</div>Author SKILL.md with metadata, UICriteria, WorkflowDefinition</div>
+          <div class="persona-step"><div class="step-num">3</div>Optionally add .sh/.py/.js scripts for complex logic</div>
+          <div class="persona-step"><div class="step-num">4</div>Package as zip and upload via Skills → Definition</div>
+          <div class="persona-step"><div class="step-num">5</div>Review validation results and publish</div>
+          <div class="persona-step"><div class="step-num">6</div>Test-run the skill to verify it works</div>
+          <div class="persona-step"><div class="step-num">7</div>Iterate and version as APIs or scenarios evolve</div>
+        </div>
+      </div>
+
+      <div class="persona-card persona-card--executor">
+        <div class="persona-icon">▶️</div>
+        <div class="persona-title" style="color: #34d399;">Skill Executor</div>
+        <div class="persona-role">Business User / QA Analyst</div>
+        <div class="persona-steps">
+          <div class="persona-step"><div class="step-num">1</div>Open Skills → Execution (or Favorites for daily runs)</div>
+          <div class="persona-step"><div class="step-num">2</div>Search and select a skill from the dropdown</div>
+          <div class="persona-step"><div class="step-num">3</div>Fill in dynamic criteria form (or upload Excel for batch)</div>
+          <div class="persona-step"><div class="step-num">4</div>Select target environment and click Run</div>
+          <div class="persona-step"><div class="step-num">5</div>Watch real-time progress or navigate away</div>
+          <div class="persona-step"><div class="step-num">6</div>Read AI-generated business summary of results</div>
+          <div class="persona-step"><div class="step-num">7</div>Drill into failures, export report, or re-run</div>
+        </div>
+      </div>
+
+      <div class="persona-card persona-card--admin">
+        <div class="persona-icon">⚙️</div>
+        <div class="persona-title" style="color: #fbbf24;">Platform Admin</div>
+        <div class="persona-role">Engineering / DevOps</div>
+        <div class="persona-steps">
+          <div class="persona-step"><div class="step-num">1</div>Register enterprise APIs in the Service Registry</div>
+          <div class="persona-step"><div class="step-num">2</div>Configure JWT token server URL per service</div>
+          <div class="persona-step"><div class="step-num">3</div>Store Client ID / Secret securely (per environment)</div>
+          <div class="persona-step"><div class="step-num">4</div>Upload Swagger/OpenAPI specs for each service</div>
+          <div class="persona-step"><div class="step-num">5</div>Test connectivity / health checks</div>
+          <div class="persona-step"><div class="step-num">6</div>Rotate credentials without impacting skills</div>
+          <div class="persona-step"><div class="step-num">7</div>Monitor execution metrics and platform health</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 8: SYSTEM COMPONENTS ════════ -->
+<div class="page" id="components">
+  <div class="page-label">Diagram 8 of 9</div>
+  <div class="page-title">System Components</div>
+  <div class="page-subtitle">Technical stack and component breakdown organized by functional area.</div>
+
+  <div class="diagram">
+    <div class="components-grid">
+      <div class="comp-group" style="border-color: rgba(59,130,246,0.2); background: rgba(59,130,246,0.03);">
+        <div class="comp-group-label" style="background: rgba(59,130,246,0.15); color: #60a5fa;">FRONTEND</div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #60a5fa;">React SPA</div>
+          <div class="comp-tech">TypeScript + Tailwind CSS</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #60a5fa;">Dynamic Form Engine</div>
+          <div class="comp-tech">JSON Schema → React Components</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #60a5fa;">SSE Client</div>
+          <div class="comp-tech">Real-time execution progress</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #60a5fa;">State Management</div>
+          <div class="comp-tech">Zustand / React Query</div>
+        </div>
+      </div>
+
+      <div class="comp-group" style="border-color: rgba(16,185,129,0.2); background: rgba(16,185,129,0.03);">
+        <div class="comp-group-label" style="background: rgba(16,185,129,0.15); color: #34d399;">BACKEND</div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #34d399;">REST API Server</div>
+          <div class="comp-tech">Java Spring Boot</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #34d399;">Skills Manager</div>
+          <div class="comp-tech">Upload, parse, validate, version</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #34d399;">Execution Manager</div>
+          <div class="comp-tech">Job queue, state, progress</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #34d399;">Auth Service</div>
+          <div class="comp-tech">JWT management, OAuth2</div>
+        </div>
+      </div>
+
+      <div class="comp-group" style="border-color: rgba(139,92,246,0.2); background: rgba(139,92,246,0.03);">
+        <div class="comp-group-label" style="background: rgba(139,92,246,0.15); color: #a78bfa;">EXECUTION ENGINES</div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #a78bfa;">Claude AI Engine</div>
+          <div class="comp-tech">Anthropic API (Sonnet/Opus)</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #a78bfa;">SKILL.md Parser</div>
+          <div class="comp-tech">Metadata + XML section extraction</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #a78bfa;">Temporal Workers</div>
+          <div class="comp-tech">Java/Go/Python/TS SDK</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #a78bfa;">Script Sandbox</div>
+          <div class="comp-tech">Docker containers</div>
+        </div>
+      </div>
+
+      <div class="comp-group" style="border-color: rgba(245,158,11,0.2); background: rgba(245,158,11,0.03);">
+        <div class="comp-group-label" style="background: rgba(245,158,11,0.15); color: #fbbf24;">DATA & INFRASTRUCTURE</div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #fbbf24;">PostgreSQL</div>
+          <div class="comp-tech">Skills, executions, users, registry</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #fbbf24;">AWS S3</div>
+          <div class="comp-tech">Skill packages, results, exports</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #fbbf24;">Secrets Manager</div>
+          <div class="comp-tech">API credentials vault</div>
+        </div>
+        <div class="comp-box">
+          <div class="comp-name" style="color: #fbbf24;">Kafka / SQS</div>
+          <div class="comp-tech">Async execution job queue</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DIAGRAM 9: UI LAYOUT ════════ -->
+<div class="page" id="screens">
+  <div class="page-label">Diagram 9 of 9</div>
+  <div class="page-title">UI Layout — Skills Execution View</div>
+  <div class="page-subtitle">Mockup of the primary user screen showing left navigation, skill selection, dynamic criteria, and execution.</div>
+
+  <div class="diagram">
+    <div class="screen-mockup">
+      <div class="screen-topbar">
+        <div class="screen-dot" style="background: #ef4444;"></div>
+        <div class="screen-dot" style="background: #f59e0b;"></div>
+        <div class="screen-dot" style="background: #10b981;"></div>
+        <span style="flex:1; text-align:center; font-size: 12px; color: var(--textDim); font-weight: 600;">SkillForge — Skills Execution</span>
+        <span style="font-size: 11px; color: var(--textDim); padding: 3px 10px; background: rgba(16,185,129,0.1); border-radius: 4px; color: #34d399;">ENV: Staging</span>
+      </div>
+      <div class="screen-body">
+        <div class="screen-sidebar">
+          <div style="font-size: 14px; font-weight: 700; color: var(--accent); padding: 4px 12px 12px; letter-spacing: -0.3px;">⚡ SkillForge</div>
+          <div class="sidebar-item">📊 Dashboard</div>
+          <div class="sidebar-divider"></div>
+          <div class="sidebar-label">Skills</div>
+          <div class="sidebar-item sidebar-item--sub">📁 Definition</div>
+          <div class="sidebar-item sidebar-item--sub sidebar-item--active">▶️ Execution</div>
+          <div class="sidebar-item sidebar-item--sub">⭐ Favorites</div>
+          <div class="sidebar-item sidebar-item--sub">📜 Past Executions</div>
+          <div class="sidebar-divider"></div>
+          <div class="sidebar-label">Admin</div>
+          <div class="sidebar-item sidebar-item--sub">🔌 Service Registry</div>
+          <div class="sidebar-item sidebar-item--sub">👥 Users</div>
+        </div>
+        <div class="screen-main">
+          <div class="screen-main-title">Execute Skill</div>
+          
+          <div class="mock-card">
+            <div class="mock-card-title" style="color: var(--textMuted);">Select Skill</div>
+            <div class="mock-field" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>⭐ Test US 2025 GMC Offers and Orders (v1.2)</span>
+              <span style="font-size: 10px;">▼</span>
+            </div>
+          </div>
+
+          <div class="mock-card">
+            <div class="mock-card-title" style="color: var(--textMuted);">Input Criteria</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+              <div>
+                <div style="font-size: 10px; color: var(--textDim); margin-bottom: 4px;">Model Year *</div>
+                <div class="mock-field">2025</div>
+              </div>
+              <div>
+                <div style="font-size: 10px; color: var(--textDim); margin-bottom: 4px;">Make *</div>
+                <div class="mock-field">GMC</div>
+              </div>
+              <div>
+                <div style="font-size: 10px; color: var(--textDim); margin-bottom: 4px;">Model *</div>
+                <div class="mock-field">Sierra</div>
+              </div>
+              <div>
+                <div style="font-size: 10px; color: var(--textDim); margin-bottom: 4px;">Country *</div>
+                <div class="mock-field">US</div>
+              </div>
+              <div style="grid-column: span 2;">
+                <div style="font-size: 10px; color: var(--textDim); margin-bottom: 4px;">Sales Channels *</div>
+                <div class="mock-field">
+                  <span style="background: var(--accentGlow); color: var(--accentLight); padding: 2px 8px; border-radius: 3px; font-size: 10px; margin-right: 4px;">MC_GMOC</span>
+                  <span style="background: var(--accentGlow); color: var(--accentLight); padding: 2px 8px; border-radius: 3px; font-size: 10px; margin-right: 4px;">MC_WEB_APP</span>
+                  <span style="background: var(--accentGlow); color: var(--accentLight); padding: 2px 8px; border-radius: 3px; font-size: 10px;">MC_ADVSR</span>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 16px; margin-top: 8px;">
+              <label style="font-size: 11px; color: var(--textMuted); display: flex; align-items: center; gap: 4px;">
+                <span style="width: 14px; height: 14px; border: 1px solid var(--border); border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; background: var(--accentGlow); color: var(--accent); font-size: 10px;">✓</span>
+                Validate Tax
+              </label>
+              <label style="font-size: 11px; color: var(--textMuted); display: flex; align-items: center; gap: 4px;">
+                <span style="width: 14px; height: 14px; border: 1px solid var(--border); border-radius: 3px; display: inline-block;"></span>
+                Validate Pricing
+              </label>
+            </div>
+            <div class="mock-btn">▶ Run Skill</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+</style>
+</body>
+</html>
